@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>SPPku - Firebase Edition</title>
+  <style>
+    :root {
+      --bg: #f8fafc; --panel: #ffffff; --card: #ffffff; --text: #1e293b; --muted: #64748b;
+      --border: rgba(0,0,0,0.08); --shadow: 0 10px 30px rgba(0,0,0,0.05); --radius: 18px;
+      --primary: #0284c7; --green: #16a34a; --red: #dc2626; --warn: #d97706;
+      --focus: 0 0 0 3px rgba(2,132,199,.2);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial; background: var(--bg); color: var(--text); font-size: 14px; }
+    a { color: inherit; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 12px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
+    .brand { display: flex; gap: 10px; align-items: center; }
+    .logo { width: 38px; height: 38px; border-radius: 10px; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); flex-shrink: 0; font-size: 20px; }
+    .brand h1 { font-size: 15px; margin: 0; font-weight: 700; }
+    .brand .sub { font-size: 11px; color: var(--muted); }
+    .rightTop { display: flex; gap: 8px; align-items: center; }
+    .pill { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: #f1f5f9; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .btn { border: 1px solid var(--border); background: #f1f5f9; color: var(--text); padding: 8px 12px; border-radius: 12px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; transition: .15s; justify-content: center; font-size: 13px; font-weight: 600; }
+    .btn:hover { border-color: var(--primary); }
+    .btn.primary { background: var(--primary); color: #ffffff; border-color: transparent; }
+    .btn.danger { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+    .btn.warn { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .loginContainer { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 10px; }
+    .loginCard { width: 100%; max-width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.08); border-radius: 24px; padding: 20px; background: #ffffff; border: 1px solid var(--border); }
+
+    .grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: 240px 1fr; }
+    .sidebar { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
+    .sideHead { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .tabs { display: flex; flex-direction: column; padding: 8px; }
+    .tab { padding: 10px 12px; border-radius: 12px; cursor: pointer; color: var(--muted); display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .tab:hover { background: #f8fafc; color: var(--text); }
+    .tab.active { background: rgba(2,132,199,.1); color: var(--primary); font-weight: 600; }
+    
+    .content { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); min-height: 480px; }
+    .contentHead { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .contentTitle h2 { margin: 0; font-size: 15px; }
+    .contentTitle .hint { font-size: 11px; color: var(--muted); }
+    .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; }
+    .input { background: #ffffff; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 12px; outline: none; width: 100%; font-size: 13px; }
+    .input:focus { box-shadow: var(--focus); border-color: var(--primary); }
+    .select { min-width: 130px; }
+    .body { padding: 12px; }
+    .card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); padding: 14px; }
+    .cards { display: grid; gap: 10px; grid-template-columns: repeat(3,minmax(0,1fr)); }
+
+    .muted { color: var(--muted); }
+    .tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; min-width: 580px; }
+    th, td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    th { color: var(--muted); text-align: left; background: #f8fafc; }
+    td.right, th.right { text-align: right; }
+    tr:hover td { background: #f8fafc; }
+    .mini { padding: 6px 10px; border-radius: 8px; font-size: 11px; }
+
+    .toastWrap { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 99999; width: min(420px, 90%); }
+    .toast { border: 1px solid var(--border); background: #ffffff; border-radius: 16px; padding: 12px 18px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); text-align: center; backdrop-filter: blur(8px); animation: slideDown 0.25s ease-out; }
+    .toast.ok { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+    .toast.err { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+    .toast.warn { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+    .toast .t { font-weight: 700; font-size: 14px; }
+    .toast .m { font-size: 12px; margin-top: 2px; opacity: 0.9; }
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modalBack { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 9998; padding: 12px; backdrop-filter: blur(3px); }
+    .modal { width: min(580px,100%); border: 1px solid var(--border); border-radius: 20px; background: #ffffff; box-shadow: var(--shadow); overflow: hidden; }
+    .modalHead { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modalHead h3 { margin: 0; font-size: 14px; }
+    .modalBody { padding: 12px 14px; display: grid; gap: 10px; max-height: 75vh; overflow-y: auto; }
+    .modalFoot { padding: 12px 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+    .field { display: grid; gap: 4px; }
+    .field label { font-size: 11px; color: var(--muted); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .badge { font-size: 10px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); display: inline-block; }
+
+    @media(max-width:768px){
+      .wrap { padding: 8px; }
+      .topbar { padding: 10px 12px; border-radius: 14px; }
+      .brand .sub { display: none; }
+      .grid { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+      .sidebar { display: none; }
+      .sidebar.showMobile { display: block; }
+      .cards { grid-template-columns: repeat(1,1fr); }
+      .tools { flex-direction: column; align-items: stretch; gap: 6px; }
+      .tools .input, .tools .select, .tools .btn { width: 100%; }
+      .row2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">🏫</div>
+        <div>
+          <h1>SPPku</h1>
+          <div class="sub">MTs Cahaya - Sistem Pembayaran Sekolah & Boarding</div>
+        </div>
+      </div>
+      <div class="rightTop">
+        <div class="pill" id="pillMe" style="display:none"></div>
+        <button class="btn danger mini" id="btnLogout" style="display:none" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Halaman Login -->
+    <div id="viewLogin" class="loginContainer">
+      <div class="card loginCard">
+        <h2 style="margin:0 0 6px 0;font-size:16px;text-align:center">Selamat Datang!</h2>
+        <div class="muted" style="font-size:11px;margin-bottom:14px;text-align:center">Sistem SPPku Firebase</div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Username</label>
+          <input class="input" id="lgUser" autocomplete="username" placeholder="Masukkan username..." onkeydown="if(event.key==='Enter') login()"/>
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Password</label>
+          <input class="input" id="lgPass" type="password" autocomplete="current-password" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') login()"/>
+        </div>
+        <div>
+          <button class="btn primary" style="width:100%;padding:10px" onclick="login()">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Halaman Aplikasi Utama -->
+    <div id="viewApp" style="display:none">
+      <div class="grid">
+        <div class="sidebar" id="mainSidebar">
+          <div class="sideHead">
+            <div style="font-weight:800;font-size:13px" id="sideName">Menu</div>
+            <div class="muted" style="font-size:11px" id="sideRole">-</div>
+          </div>
+          <div class="tabs" id="tabList"></div>
+        </div>
+        <div class="content">
+          <div class="contentHead">
+            <div class="contentTitle">
+              <h2 id="pageTitle">Dashboard</h2>
+              <div class="hint" id="pageHint">Summary</div>
+            </div>
+            <div class="tools">
+              <input class="input" id="q" placeholder="Cari..." style="max-width:200px" oninput="loadActive()"/>
+              <button class="btn primary" id="btnAdd" onclick="openAdd()">Tambah Data</button>
+            </div>
+          </div>
+          <div class="body" id="body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pop-up -->
+  <div class="modalBack" id="modalBack" onclick="if(event.target.id==='modalBack') closeModal()">
+    <div class="modal">
+      <div class="modalHead">
+        <h3 id="mTitle">Modal</h3>
+        <button class="btn mini" onclick="closeModal()">Tutup</button>
+      </div>
+      <div class="modalBody" id="mBody"></div>
+      <div class="modalFoot" id="mFoot">
+        <button class="btn" onclick="closeModal()">Batal</button>
+        <button class="btn primary" id="mSave" onclick="saveModal()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toastWrap" id="toastWrap"></div>
+
+  <!-- Firebase SDK Modern (v10) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Konfigurasi Firebase Project Anda
+    const firebaseConfig = {
+      apiKey: "AIzaSyBu3FsEvZnlBNUzYVUFW7rnUbak9Or6fHU",
+      authDomain: "zero-b2d03.firebaseapp.com",
+      projectId: "zero-b2d03",
+      storageBucket: "zero-b2d03.firebasestorage.app",
+      messagingSenderId: "697361025400",
+      appId: "1:697361025400:web:4f1ffc301e25586c81e08d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const STATE = {
+      me: JSON.parse(sessionStorage.getItem('SPP_USER') || 'null'),
+      module: 'DASH',
+      lookup: { kelas: {}, siswa: {} }
+    };
+
+    const MODS = {
+      DASH: { title: 'Dashboard', hint: 'Ringkasan data sekolah & boarding', roles: ['SUPERADMIN','ADMIN','GURU'] },
+      KELAS: { title: 'Kelas', hint: 'Manajemen rombel (7, 8, 9)', roles: ['SUPERADMIN','ADMIN','GURU'] },
+      SISWA: { title: 'Siswa', hint: 'Data siswa & status boarding', roles: ['SUPERADMIN','ADMIN','GURU'] },
+      BIAYA: { title: 'Biaya', hint: 'Tarif iuran (Reguler & Boarding)', roles: ['SUPERADMIN','ADMIN','GURU'] },
+      USERS: { title: 'Users', hint: 'Manajemen akun pengguna', roles: ['SUPERADMIN','ADMIN'] }
+    };
+
+    // SHA-256 Sederhana
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function toast(title, msg, type='ok') {
+      const wrap = document.getElementById('toastWrap');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<div class="t">${escapeHtml(title)}</div><div class="m">${escapeHtml(msg||'')}</div>`;
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+
+    function escapeHtml(s) {
+      return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+    }
+
+    function fmtRp(n) {
+      return 'Rp ' + Number(n||0).toLocaleString('id-ID');
+    }
+
+    // Inisialisasi Akun Superadmin Awal
+    async function initDatabase() {
+      const saRef = doc(db, "users", "superadmin");
+      const saSnap = await getDoc(saRef);
+      if (!saSnap.exists()) {
+        const hash = await sha256("12345678");
+        await setDoc(saRef, {
+          username: "superadmin",
+          passHash: hash,
+          name: "Super Admin",
+          role: "SUPERADMIN",
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+
+    // Login System
+    window.login = async function() {
+      const u = document.getElementById('lgUser').value.trim().toLowerCase();
+      const p = document.getElementById('lgPass').value;
+      if (!u || !p) return toast('Error', 'Username & password wajib diisi', 'err');
+
+      try {
+        const uRef = doc(db, "users", u);
+        const uSnap = await getDoc(uRef);
+        if (!uSnap.exists()) return toast('Error', 'User tidak ditemukan', 'err');
+
+        const userData = uSnap.data();
+        const pHash = await sha256(p);
+
+        if (userData.passHash !== pHash) {
+          return toast('Error', 'Password salah', 'err');
+        }
+
+        STATE.me = { username: userData.username, role: userData.role, name: userData.name };
+        sessionStorage.setItem('SPP_USER', JSON.stringify(STATE.me));
+        
+        bootApp();
+        toast('Sukses', `Selamat datang, ${userData.name}`);
+      } catch (err) {
+        toast('Error', err.message, 'err');
+      }
+    };
+
+    window.logout = function() {
+      sessionStorage.removeItem('SPP_USER');
+      STATE.me = null;
+      document.getElementById('viewLogin').style.display = 'flex';
+      document.getElementById('viewApp').style.display = 'none';
+      document.getElementById('btnLogout').style.display = 'none';
+      document.getElementById('pillMe').style.display = 'none';
+    };
+
+    function bootApp() {
+      document.getElementById('viewLogin').style.display = 'none';
+      document.getElementById('viewApp').style.display = 'block';
+      document.getElementById('btnLogout').style.display = 'inline-flex';
+      
+      const pill = document.getElementById('pillMe');
+      pill.style.display = 'inline-block';
+      pill.textContent = `${STATE.me.username} • ${STATE.me.role}`;
+
+      document.getElementById('sideName').textContent = STATE.me.name;
+      document.getElementById('sideRole').textContent = `Role: ${STATE.me.role}`;
+
+      renderTabs();
+      switchModule('DASH');
+      loadLookups();
+    }
+
+    function renderTabs() {
+      const keys = Object.keys(MODS).filter(k => MODS[k].roles.includes(STATE.me.role));
+      document.getElementById('tabList').innerHTML = keys.map(k => `
+        <div class="tab ${STATE.module===k?'active':''}" onclick="switchModule('${k}')">
+          <span>${MODS[k].title}</span><span class="muted">›</span>
+        </div>`).join('');
+    }
+
+    window.switchModule = function(key) {
+      STATE.module = key;
+      document.getElementById('pageTitle').textContent = MODS[key].title;
+      document.getElementById('pageHint').textContent = MODS[key].hint;
+      document.getElementById('btnAdd').style.display = (key === 'DASH') ? 'none' : 'inline-flex';
+      renderTabs();
+      loadActive();
+    };
+
+    async function loadLookups() {
+      const kSnap = await getDocs(collection(db, "kelas"));
+      STATE.lookup.kelas = {};
+      kSnap.forEach(d => STATE.lookup.kelas[d.id] = d.data().nama);
+    }
+
+    async function loadActive() {
+      const body = document.getElementById('body');
+      const m = STATE.module;
+      const qText = document.getElementById('q').value.trim().toLowerCase();
+
+      body.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">Memuat data dari Firebase...</div>';
+
+      try {
+        if (m === 'DASH') {
+          const sSnap = await getDocs(collection(db, "siswa"));
+          const kSnap = await getDocs(collection(db, "kelas"));
+          const bSnap = await getDocs(collection(db, "biaya"));
+
+          body.innerHTML = `
+            <div class="cards">
+              <div class="card"><div class="muted">Siswa Aktif</div><div style="font-size:20px;font-weight:bold">${sSnap.size}</div></div>
+              <div class="card"><div class="muted">Total Rombel Kelas</div><div style="font-size:20px;font-weight:bold">${kSnap.size}</div></div>
+              <div class="card"><div class="muted">Biaya Terdaftar</div><div style="font-size:20px;font-weight:bold">${bSnap.size}</div></div>
+            </div>`;
+          return;
+        }
+
+        if (m === 'KELAS') {
+          const snap = await getDocs(collection(db, "kelas"));
+          let items = [];
+          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+          if (qText) items = items.filter(x => x.nama.toLowerCase().includes(qText));
+
+          body.innerHTML = `
+            <div class="tableWrap">
+              <table>
+                <thead><tr><th>Nama Kelas</th><th>Wali Kelas</th><th>Aksi</th></tr></thead>
+                <tbody>
+                  ${items.map(x => `
+                    <tr>
+                      <td><b>${escapeHtml(x.nama)}</b></td>
+                      <td>${escapeHtml(x.wali || '-')}</td>
+                      <td>
+                        <button class="btn mini danger" onclick="deleteRecord('kelas','${x.id}')">Hapus</button>
+                      </td>
+                    </tr>
+                  `).join('') || '<tr><td colspan="3" class="muted">Belum ada data kelas.</td></tr>'}
+                </tbody>
+              </table>
+            </div>`;
+          return;
+        }
+
+        if (m === 'SISWA') {
+          const snap = await getDocs(collection(db, "siswa"));
+          let items = [];
+          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+          if (qText) items = items.filter(x => x.nama.toLowerCase().includes(qText) || (x.nisn && x.nisn.includes(qText)));
+
+          body.innerHTML = `
+            <div class="tableWrap">
+              <table>
+                <thead><tr><th>NISN</th><th>Nama Siswa</th><th>Kelas</th><th>Status</th><th>Nama Ortu</th><th>Aksi</th></tr></thead>
+                <tbody>
+                  ${items.map(x => `
+                    <tr>
+                      <td>${escapeHtml(x.nisn || '-')}</td>
+                      <td><b>${escapeHtml(x.nama)}</b></td>
+                      <td>${escapeHtml(STATE.lookup.kelas[x.kelasId] || x.kelasId || '-')}</td>
+                      <td><span class="badge">${x.isPondok ? 'Boarding' : 'Reguler'}</span></td>
+                      <td>${escapeHtml(x.ortuNama || '-')}</td>
+                      <td>
+                        <button class="btn mini danger" onclick="deleteRecord('siswa','${x.id}')">Hapus</button>
+                      </td>
+                    </tr>
+                  `).join('') || '<tr><td colspan="6" class="muted">Belum ada data siswa.</td></tr>'}
+                </tbody>
+              </table>
+            </div>`;
+          return;
+        }
+
+        if (m === 'BIAYA') {
+          const snap = await getDocs(collection(db, "biaya"));
+          let items = [];
+          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+          body.innerHTML = `
+            <div class="tableWrap">
+              <table>
+                <thead><tr><th>Nama Biaya</th><th class="right">Nominal</th><th>Kategori</th><th>Tipe</th><th>Aksi</th></tr></thead>
+                <tbody>
+                  ${items.map(x => `
+                    <tr>
+                      <td><b>${escapeHtml(x.nama)}</b></td>
+                      <td class="right">${fmtRp(x.nominal)}</td>
+                      <td><span class="badge">${escapeHtml(x.kategori)}</span></td>
+                      <td><span class="badge">${escapeHtml(x.tipe)}</span></td>
+                      <td>
+                        <button class="btn mini danger" onclick="deleteRecord('biaya','${x.id}')">Hapus</button>
+                      </td>
+                    </tr>
+                  `).join('') || '<tr><td colspan="5" class="muted">Belum ada tarif biaya.</td></tr>'}
+                </tbody>
+              </table>
+            </div>`;
+          return;
+        }
+
+        if (m === 'USERS') {
+          const snap = await getDocs(collection(db, "users"));
+          let items = [];
+          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+          body.innerHTML = `
+            <div class="tableWrap">
+              <table>
+                <thead><tr><th>Username</th><th>Nama Lengkap</th><th>Role</th><th>Aksi</th></tr></thead>
+                <tbody>
+                  ${items.map(x => `
+                    <tr>
+                      <td><b>${escapeHtml(x.username)}</b></td>
+                      <td>${escapeHtml(x.name)}</td>
+                      <td><span class="badge">${escapeHtml(x.role)}</span></td>
+                      <td>
+                        ${x.username !== 'superadmin' ? `<button class="btn mini danger" onclick="deleteRecord('users','${x.id}')">Hapus</button>` : '-'}
+                      </td>
+                    </tr>
+                  `).join('') || '<tr><td colspan="4" class="muted">Belum ada data user.</td></tr>'}
+                </tbody>
+              </table>
+            </div>`;
+          return;
+        }
+
+      } catch (err) {
+        body.innerHTML = `<div class="muted" style="color:var(--red);">Gagal memuat data: ${err.message}</div>`;
+      }
+    }
+
+    // Modal Operations
+    window.openAdd = function() {
+      const m = STATE.module;
+      const modalBack = document.getElementById('modalBack');
+      const title = document.getElementById('mTitle');
+      const body = document.getElementById('mBody');
+
+      if (m === 'KELAS') {
+        title.textContent = 'Tambah Kelas Baru';
+        body.innerHTML = `
+          <div class="field"><label>Nama Kelas (Contoh: 7A, 8B)</label><input class="input" id="mKelasNama"/></div>
+          <div class="field"><label>Wali Kelas</label><input class="input" id="mWali"/></div>`;
+      } else if (m === 'SISWA') {
+        const options = Object.keys(STATE.lookup.kelas).map(kId => `<option value="${kId}">${STATE.lookup.kelas[kId]}</option>`).join('');
+        title.textContent = 'Tambah Siswa Baru';
+        body.innerHTML = `
+          <div class="field"><label>NISN</label><input class="input" id="mNisn"/></div>
+          <div class="field"><label>Nama Siswa</label><input class="input" id="mNama"/></div>
+          <div class="field"><label>Kelas</label><select class="input" id="mKelasId">${options}</select></div>
+          <div class="field"><label>Status</label><select class="input" id="mIsPondok"><option value="0">Reguler</option><option value="1">Boarding</option></select></div>
+          <div class="field"><label>Nama Ortu</label><input class="input" id="mOrtuNama"/></div>`;
+      } else if (m === 'BIAYA') {
+        title.textContent = 'Tambah Biaya Baru';
+        body.innerHTML = `
+          <div class="field"><label>Nama Biaya</label><input class="input" id="mBiayaNama" placeholder="Contoh: SPP Bulanan"/></div>
+          <div class="field"><label>Nominal (Rp)</label><input class="input" id="mBiayaNominal" type="number"/></div>
+          <div class="field"><label>Kategori</label><select class="input" id="mKategori"><option value="REGULER">Reguler</option><option value="BOARDING">Boarding</option></select></div>
+          <div class="field"><label>Tipe</label><select class="input" id="mTipe"><option value="BULANAN">Bulanan</option><option value="SEKALI">Sekali / Tahunan</option></select></div>`;
+      } else if (m === 'USERS') {
+        title.textContent = 'Tambah User / Akun';
+        body.innerHTML = `
+          <div class="field"><label>Username</label><input class="input" id="mUsrName"/></div>
+          <div class="field"><label>Nama Lengkap</label><input class="input" id="mUsrFull"/></div>
+          <div class="field"><label>Role</label><select class="input" id="mUsrRole"><option value="ADMIN">ADMIN</option><option value="GURU">GURU</option><option value="ORTU">ORTU</option></select></div>
+          <div class="field"><label>Password</label><input class="input" id="mUsrPass" type="password"/></div>`;
+      }
+
+      modalBack.style.display = 'flex';
+    };
+
+    window.closeModal = function() {
+      document.getElementById('modalBack').style.display = 'none';
+    };
+
+    window.saveModal = async function() {
+      const m = STATE.module;
+      try {
+        if (m === 'KELAS') {
+          const nama = document.getElementById('mKelasNama').value.trim();
+          const wali = document.getElementById('mWali').value.trim();
+          if (!nama) return toast('Error', 'Nama kelas wajib diisi', 'err');
+
+          await addDoc(collection(db, "kelas"), { nama, wali, createdAt: new Date().toISOString() });
+        } else if (m === 'SISWA') {
+          const nisn = document.getElementById('mNisn').value.trim();
+          const nama = document.getElementById('mNama').value.trim();
+          const kelasId = document.getElementById('mKelasId').value;
+          const isPondok = document.getElementById('mIsPondok').value === '1';
+          const ortuNama = document.getElementById('mOrtuNama').value.trim();
+          if (!nama) return toast('Error', 'Nama siswa wajib diisi', 'err');
+
+          await addDoc(collection(db, "siswa"), { nisn, nama, kelasId, isPondok, ortuNama, createdAt: new Date().toISOString() });
+        } else if (m === 'BIAYA') {
+          const nama = document.getElementById('mBiayaNama').value.trim();
+          const nominal = Number(document.getElementById('mBiayaNominal').value || 0);
+          const kategori = document.getElementById('mKategori').value;
+          const tipe = document.getElementById('mTipe').value;
+
+          await addDoc(collection(db, "biaya"), { nama, nominal, kategori, tipe, createdAt: new Date().toISOString() });
+        } else if (m === 'USERS') {
+          const username = document.getElementById('mUsrName').value.trim().toLowerCase();
+          const name = document.getElementById('mUsrFull').value.trim();
+          const role = document.getElementById('mUsrRole').value;
+          const pass = document.getElementById('mUsrPass').value;
+
+          if (!username || !pass) return toast('Error', 'Username & password wajib diisi', 'err');
+          const passHash = await sha256(pass);
+
+          await setDoc(doc(db, "users", username), { username, name, role, passHash, createdAt: new Date().toISOString() });
+        }
+
+        toast('Sukses', 'Data berhasil disimpan!');
+        closeModal();
+        await loadLookups();
+        loadActive();
+      } catch (err) {
+        toast('Error', 'Gagal menyimpan: ' + err.message, 'err');
+      }
+    };
+
+    window.deleteRecord = async function(collName, id) {
+      if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+      try {
+        await deleteDoc(doc(db, collName, id));
+        toast('Sukses', 'Data berhasil dihapus');
+        await loadLookups();
+        loadActive();
+      } catch (err) {
+        toast('Error', 'Gagal menghapus: ' + err.message, 'err');
+      }
+    };
+
+    // Booting awal
+    initDatabase();
+    if (STATE.me) {
+      bootApp();
+    }
+  </script>
+</body>
+</html>

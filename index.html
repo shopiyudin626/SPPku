@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>SPPku - Firebase Edition</title>
+  <title>SPPku - MTs Cahaya</title>
   <style>
     :root {
       --bg: #f8fafc; --panel: #ffffff; --card: #ffffff; --text: #1e293b; --muted: #64748b;
@@ -47,7 +47,6 @@
     .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; }
     .input { background: #ffffff; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 12px; outline: none; width: 100%; font-size: 13px; }
     .input:focus { box-shadow: var(--focus); border-color: var(--primary); }
-    .select { min-width: 130px; }
     .body { padding: 12px; }
     .card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); padding: 14px; }
     .cards { display: grid; gap: 10px; grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -65,9 +64,6 @@
     .toast { border: 1px solid var(--border); background: #ffffff; border-radius: 16px; padding: 12px 18px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); text-align: center; backdrop-filter: blur(8px); animation: slideDown 0.25s ease-out; }
     .toast.ok { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
     .toast.err { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
-    .toast.warn { border-color: #fde68a; background: #fffbeb; color: #92400e; }
-    .toast .t { font-weight: 700; font-size: 14px; }
-    .toast .m { font-size: 12px; margin-top: 2px; opacity: 0.9; }
     @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
     .modalBack { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 9998; padding: 12px; backdrop-filter: blur(3px); }
@@ -78,20 +74,16 @@
     .modalFoot { padding: 12px 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
     .field { display: grid; gap: 4px; }
     .field label { font-size: 11px; color: var(--muted); }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .badge { font-size: 10px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); display: inline-block; }
+    .badge.ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+    .badge.warn { background: #fef3c7; color: #b45309; border-color: #fde68a; }
 
     @media(max-width:768px){
       .wrap { padding: 8px; }
-      .topbar { padding: 10px 12px; border-radius: 14px; }
-      .brand .sub { display: none; }
-      .grid { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+      .grid { grid-template-columns: 1fr; }
       .sidebar { display: none; }
       .sidebar.showMobile { display: block; }
-      .cards { grid-template-columns: repeat(1,1fr); }
-      .tools { flex-direction: column; align-items: stretch; gap: 6px; }
-      .tools .input, .tools .select, .tools .btn { width: 100%; }
-      .row2 { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -99,7 +91,10 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div class="logo"><img src="https://lh3.googleusercontent.com/d/1-R_iT18orWJVK6Vb8HsmMrgHq4xZt_nG" style="width:100%;height:100%;object-fit:cover;" alt="Logo"></div>
+        <div class="logo">
+          <!-- Ganti link di bawah ini dengan URL logo sekolah Anda yang dulu dipakai di Apps Script -->
+          <img src="https://lh3.googleusercontent.com/d/1-R_iT18orWJVK6Vb8HsmMrgHq4xZt_nG" style="width:100%;height:100%;object-fit:contain;" alt="Logo" onerror="this.parentElement.textContent='🏫'">
+        </div>
         <div>
           <h1>SPPku</h1>
           <div class="sub">MTs Cahaya - Sistem Pembayaran Sekolah & Boarding</div>
@@ -181,7 +176,6 @@
       getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Konfigurasi Firebase Project Anda
     const firebaseConfig = {
       apiKey: "AIzaSyBu3FsEvZnlBNUzYVUFW7rnUbak9Or6fHU",
       authDomain: "zero-b2d03.firebaseapp.com",
@@ -197,18 +191,18 @@
     const STATE = {
       me: JSON.parse(sessionStorage.getItem('SPP_USER') || 'null'),
       module: 'DASH',
-      lookup: { kelas: {}, siswa: {} }
+      lookup: { kelas: {}, siswa: {}, biaya: {} }
     };
 
     const MODS = {
-      DASH: { title: 'Dashboard', hint: 'Ringkasan data sekolah & boarding', roles: ['SUPERADMIN','ADMIN','GURU'] },
-      KELAS: { title: 'Kelas', hint: 'Manajemen rombel (7, 8, 9)', roles: ['SUPERADMIN','ADMIN','GURU'] },
+      DASH: { title: 'Dashboard', hint: 'Ringkasan data keuangan & sekolah', roles: ['SUPERADMIN','ADMIN','GURU','ORTU'] },
+      KELAS: { title: 'Kelas', hint: 'Manajemen rombel', roles: ['SUPERADMIN','ADMIN'] },
       SISWA: { title: 'Siswa', hint: 'Data siswa & status boarding', roles: ['SUPERADMIN','ADMIN','GURU'] },
-      BIAYA: { title: 'Biaya', hint: 'Tarif iuran (Reguler & Boarding)', roles: ['SUPERADMIN','ADMIN','GURU'] },
+      BIAYA: { title: 'Tarif Biaya', hint: 'Atur tarif iuran bulanan/sekali', roles: ['SUPERADMIN','ADMIN'] },
+      BAYAR: { title: 'Pembayaran SPP', hint: 'Catat transaksi masuk', roles: ['SUPERADMIN','ADMIN','GURU'] },
       USERS: { title: 'Users', hint: 'Manajemen akun pengguna', roles: ['SUPERADMIN','ADMIN'] }
     };
 
-    // SHA-256 Sederhana
     async function sha256(str) {
       const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
       return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -218,7 +212,7 @@
       const wrap = document.getElementById('toastWrap');
       const el = document.createElement('div');
       el.className = `toast ${type}`;
-      el.innerHTML = `<div class="t">${escapeHtml(title)}</div><div class="m">${escapeHtml(msg||'')}</div>`;
+      el.innerHTML = `<div style="font-weight:700">${escapeHtml(title)}</div><div style="font-size:12px;margin-top:2px">${escapeHtml(msg||'')}</div>`;
       wrap.appendChild(el);
       setTimeout(() => el.remove(), 3200);
     }
@@ -231,7 +225,6 @@
       return 'Rp ' + Number(n||0).toLocaleString('id-ID');
     }
 
-    // Inisialisasi Akun Superadmin Awal
     async function initDatabase() {
       const saRef = doc(db, "users", "superadmin");
       const saSnap = await getDoc(saRef);
@@ -247,7 +240,6 @@
       }
     }
 
-    // Login System
     window.login = async function() {
       const u = document.getElementById('lgUser').value.trim().toLowerCase();
       const p = document.getElementById('lgPass').value;
@@ -261,9 +253,7 @@
         const userData = uSnap.data();
         const pHash = await sha256(p);
 
-        if (userData.passHash !== pHash) {
-          return toast('Error', 'Password salah', 'err');
-        }
+        if (userData.passHash !== pHash) return toast('Error', 'Password salah', 'err');
 
         STATE.me = { username: userData.username, role: userData.role, name: userData.name };
         sessionStorage.setItem('SPP_USER', JSON.stringify(STATE.me));
@@ -313,7 +303,7 @@
       STATE.module = key;
       document.getElementById('pageTitle').textContent = MODS[key].title;
       document.getElementById('pageHint').textContent = MODS[key].hint;
-      document.getElementById('btnAdd').style.display = (key === 'DASH') ? 'none' : 'inline-flex';
+      document.getElementById('btnAdd').style.display = (['DASH'].includes(key)) ? 'none' : 'inline-flex';
       renderTabs();
       loadActive();
     };
@@ -322,6 +312,14 @@
       const kSnap = await getDocs(collection(db, "kelas"));
       STATE.lookup.kelas = {};
       kSnap.forEach(d => STATE.lookup.kelas[d.id] = d.data().nama);
+
+      const sSnap = await getDocs(collection(db, "siswa"));
+      STATE.lookup.siswa = {};
+      sSnap.forEach(d => STATE.lookup.siswa[d.id] = d.data().nama);
+
+      const bSnap = await getDocs(collection(db, "biaya"));
+      STATE.lookup.biaya = {};
+      bSnap.forEach(d => STATE.lookup.biaya[d.id] = d.data());
     }
 
     async function loadActive() {
@@ -329,19 +327,22 @@
       const m = STATE.module;
       const qText = document.getElementById('q').value.trim().toLowerCase();
 
-      body.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">Memuat data dari Firebase...</div>';
+      body.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">Memuat data...</div>';
 
       try {
         if (m === 'DASH') {
           const sSnap = await getDocs(collection(db, "siswa"));
           const kSnap = await getDocs(collection(db, "kelas"));
-          const bSnap = await getDocs(collection(db, "biaya"));
+          const paySnap = await getDocs(collection(db, "pembayaran"));
+          
+          let totalKas = 0;
+          paySnap.forEach(d => totalKas += Number(d.data().nominal || 0));
 
           body.innerHTML = `
             <div class="cards">
-              <div class="card"><div class="muted">Siswa Aktif</div><div style="font-size:20px;font-weight:bold">${sSnap.size}</div></div>
+              <div class="card"><div class="muted">Total Siswa Aktif</div><div style="font-size:20px;font-weight:bold">${sSnap.size}</div></div>
               <div class="card"><div class="muted">Total Rombel Kelas</div><div style="font-size:20px;font-weight:bold">${kSnap.size}</div></div>
-              <div class="card"><div class="muted">Biaya Terdaftar</div><div style="font-size:20px;font-weight:bold">${bSnap.size}</div></div>
+              <div class="card"><div class="muted">Kas Masuk (Total)</div><div style="font-size:20px;font-weight:bold;color:var(--green)">${fmtRp(totalKas)}</div></div>
             </div>`;
           return;
         }
@@ -350,7 +351,6 @@
           const snap = await getDocs(collection(db, "kelas"));
           let items = [];
           snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-
           if (qText) items = items.filter(x => x.nama.toLowerCase().includes(qText));
 
           body.innerHTML = `
@@ -362,11 +362,8 @@
                     <tr>
                       <td><b>${escapeHtml(x.nama)}</b></td>
                       <td>${escapeHtml(x.wali || '-')}</td>
-                      <td>
-                        <button class="btn mini danger" onclick="deleteRecord('kelas','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>
-                  `).join('') || '<tr><td colspan="3" class="muted">Belum ada data kelas.</td></tr>'}
+                      <td><button class="btn mini danger" onclick="deleteRecord('kelas','${x.id}')">Hapus</button></td>
+                    </tr>`).join('') || '<tr><td colspan="3" class="muted">Belum ada data kelas.</td></tr>'}
                 </tbody>
               </table>
             </div>`;
@@ -377,7 +374,6 @@
           const snap = await getDocs(collection(db, "siswa"));
           let items = [];
           snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-
           if (qText) items = items.filter(x => x.nama.toLowerCase().includes(qText) || (x.nisn && x.nisn.includes(qText)));
 
           body.innerHTML = `
@@ -389,14 +385,11 @@
                     <tr>
                       <td>${escapeHtml(x.nisn || '-')}</td>
                       <td><b>${escapeHtml(x.nama)}</b></td>
-                      <td>${escapeHtml(STATE.lookup.kelas[x.kelasId] || x.kelasId || '-')}</td>
-                      <td><span class="badge">${x.isPondok ? 'Boarding' : 'Reguler'}</span></td>
+                      <td>${escapeHtml(STATE.lookup.kelas[x.kelasId] || '-')}</td>
+                      <td><span class="badge ${x.isPondok?'warn':'ok'}">${x.isPondok ? 'Boarding' : 'Reguler'}</span></td>
                       <td>${escapeHtml(x.ortuNama || '-')}</td>
-                      <td>
-                        <button class="btn mini danger" onclick="deleteRecord('siswa','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>
-                  `).join('') || '<tr><td colspan="6" class="muted">Belum ada data siswa.</td></tr>'}
+                      <td><button class="btn mini danger" onclick="deleteRecord('siswa','${x.id}')">Hapus</button></td>
+                    </tr>`).join('') || '<tr><td colspan="6" class="muted">Belum ada data siswa.</td></tr>'}
                 </tbody>
               </table>
             </div>`;
@@ -419,11 +412,34 @@
                       <td class="right">${fmtRp(x.nominal)}</td>
                       <td><span class="badge">${escapeHtml(x.kategori)}</span></td>
                       <td><span class="badge">${escapeHtml(x.tipe)}</span></td>
-                      <td>
-                        <button class="btn mini danger" onclick="deleteRecord('biaya','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>
-                  `).join('') || '<tr><td colspan="5" class="muted">Belum ada tarif biaya.</td></tr>'}
+                      <td><button class="btn mini danger" onclick="deleteRecord('biaya','${x.id}')">Hapus</button></td>
+                    </tr>`).join('') || '<tr><td colspan="5" class="muted">Belum ada tarif biaya.</td></tr>'}
+                </tbody>
+              </table>
+            </div>`;
+          return;
+        }
+
+        if (m === 'BAYAR') {
+          const snap = await getDocs(collection(db, "pembayaran"));
+          let items = [];
+          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+          if (qText) items = items.filter(x => (x.bulan && x.bulan.toLowerCase().includes(qText)));
+
+          body.innerHTML = `
+            <div class="tableWrap">
+              <table>
+                <thead><tr><th>Tanggal</th><th>Nama Siswa</th><th>Jenis Pembayaran / Bulan</th><th class="right">Nominal</th><th>Petugas</th><th>Aksi</th></tr></thead>
+                <tbody>
+                  ${items.map(x => `
+                    <tr>
+                      <td>${escapeHtml(x.tanggal || '-')}</td>
+                      <td><b>${escapeHtml(STATE.lookup.siswa[x.siswaId] || 'Siswa')}</b></td>
+                      <td>${escapeHtml(x.keterangan || x.bulan || '-')}</td>
+                      <td class="right" style="color:var(--green);font-weight:bold">${fmtRp(x.nominal)}</td>
+                      <td>${escapeHtml(x.petugas || '-')}</td>
+                      <td><button class="btn mini danger" onclick="deleteRecord('pembayaran','${x.id}')">Hapus</button></td>
+                    </tr>`).join('') || '<tr><td colspan="6" class="muted">Belum ada riwayat pembayaran.</td></tr>'}
                 </tbody>
               </table>
             </div>`;
@@ -445,11 +461,8 @@
                       <td><b>${escapeHtml(x.username)}</b></td>
                       <td>${escapeHtml(x.name)}</td>
                       <td><span class="badge">${escapeHtml(x.role)}</span></td>
-                      <td>
-                        ${x.username !== 'superadmin' ? `<button class="btn mini danger" onclick="deleteRecord('users','${x.id}')">Hapus</button>` : '-'}
-                      </td>
-                    </tr>
-                  `).join('') || '<tr><td colspan="4" class="muted">Belum ada data user.</td></tr>'}
+                      <td>${x.username !== 'superadmin' ? `<button class="btn mini danger" onclick="deleteRecord('users','${x.id}')">Hapus</button>` : '-'}</td>
+                    </tr>`).join('') || '<tr><td colspan="4" class="muted">Belum ada data user.</td></tr>'}
                 </tbody>
               </table>
             </div>`;
@@ -461,7 +474,6 @@
       }
     }
 
-    // Modal Operations
     window.openAdd = function() {
       const m = STATE.module;
       const modalBack = document.getElementById('modalBack');
@@ -483,12 +495,19 @@
           <div class="field"><label>Status</label><select class="input" id="mIsPondok"><option value="0">Reguler</option><option value="1">Boarding</option></select></div>
           <div class="field"><label>Nama Ortu</label><input class="input" id="mOrtuNama"/></div>`;
       } else if (m === 'BIAYA') {
-        title.textContent = 'Tambah Biaya Baru';
+        title.textContent = 'Tambah Tarif Biaya';
         body.innerHTML = `
-          <div class="field"><label>Nama Biaya</label><input class="input" id="mBiayaNama" placeholder="Contoh: SPP Bulanan"/></div>
+          <div class="field"><label>Nama Biaya (Contoh: SPP Bulanan)</label><input class="input" id="mBiayaNama"/></div>
           <div class="field"><label>Nominal (Rp)</label><input class="input" id="mBiayaNominal" type="number"/></div>
           <div class="field"><label>Kategori</label><select class="input" id="mKategori"><option value="REGULER">Reguler</option><option value="BOARDING">Boarding</option></select></div>
           <div class="field"><label>Tipe</label><select class="input" id="mTipe"><option value="BULANAN">Bulanan</option><option value="SEKALI">Sekali / Tahunan</option></select></div>`;
+      } else if (m === 'BAYAR') {
+        const sOptions = Object.keys(STATE.lookup.siswa).map(sId => `<option value="${sId}">${STATE.lookup.siswa[sId]}</option>`).join('');
+        title.textContent = 'Catat Pembayaran SPP';
+        body.innerHTML = `
+          <div class="field"><label>Pilih Siswa</label><select class="input" id="mPaySiswa">${sOptions}</select></div>
+          <div class="field"><label>Bulan / Keterangan Pembayaran</label><input class="input" id="mPayBulan" placeholder="Contoh: Juli 2026 / Uang Gedung"/></div>
+          <div class="field"><label>Nominal Bayar (Rp)</label><input class="input" id="mPayNominal" type="number"/></div>`;
       } else if (m === 'USERS') {
         title.textContent = 'Tambah User / Akun';
         body.innerHTML = `
@@ -512,7 +531,6 @@
           const nama = document.getElementById('mKelasNama').value.trim();
           const wali = document.getElementById('mWali').value.trim();
           if (!nama) return toast('Error', 'Nama kelas wajib diisi', 'err');
-
           await addDoc(collection(db, "kelas"), { nama, wali, createdAt: new Date().toISOString() });
         } else if (m === 'SISWA') {
           const nisn = document.getElementById('mNisn').value.trim();
@@ -521,24 +539,33 @@
           const isPondok = document.getElementById('mIsPondok').value === '1';
           const ortuNama = document.getElementById('mOrtuNama').value.trim();
           if (!nama) return toast('Error', 'Nama siswa wajib diisi', 'err');
-
           await addDoc(collection(db, "siswa"), { nisn, nama, kelasId, isPondok, ortuNama, createdAt: new Date().toISOString() });
         } else if (m === 'BIAYA') {
           const nama = document.getElementById('mBiayaNama').value.trim();
           const nominal = Number(document.getElementById('mBiayaNominal').value || 0);
           const kategori = document.getElementById('mKategori').value;
           const tipe = document.getElementById('mTipe').value;
-
           await addDoc(collection(db, "biaya"), { nama, nominal, kategori, tipe, createdAt: new Date().toISOString() });
+        } else if (m === 'BAYAR') {
+          const siswaId = document.getElementById('mPaySiswa').value;
+          const bulan = document.getElementById('mPayBulan').value.trim();
+          const nominal = Number(document.getElementById('mPayNominal').value || 0);
+          if (!nominal) return toast('Error', 'Nominal wajib diisi', 'err');
+          
+          const d = new Date();
+          const tanggal = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+          await addDoc(collection(db, "pembayaran"), { 
+            siswaId, bulan, keterangan: bulan, nominal, tanggal, 
+            petugas: STATE.me.name, createdAt: new Date().toISOString() 
+          });
         } else if (m === 'USERS') {
           const username = document.getElementById('mUsrName').value.trim().toLowerCase();
           const name = document.getElementById('mUsrFull').value.trim();
           const role = document.getElementById('mUsrRole').value;
           const pass = document.getElementById('mUsrPass').value;
-
           if (!username || !pass) return toast('Error', 'Username & password wajib diisi', 'err');
           const passHash = await sha256(pass);
-
           await setDoc(doc(db, "users", username), { username, name, role, passHash, createdAt: new Date().toISOString() });
         }
 
@@ -563,11 +590,8 @@
       }
     };
 
-    // Booting awal
     initDatabase();
-    if (STATE.me) {
-      bootApp();
-    }
+    if (STATE.me) bootApp();
   </script>
 </body>
 </html>

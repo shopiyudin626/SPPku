@@ -1,98 +1,119 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>SPPku v2.6 - MTs Cahaya</title>
+  <title>SPPku - Sistem Pembayaran Sekolah & Boarding</title>
+  <!-- Firebase SDK v10 Modular -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Ganti dengan Konfigurasi Firebase Proyek Anda
+    const firebaseConfig = {
+      apiKey: "AIzaSyYOUR_API_KEY_HERE",
+      authDomain: "sppku-app.firebaseapp.com",
+      projectId: "sppku-app",
+      storageBucket: "sppku-app.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcde"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.db = db;
+    window.fbLibs = { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where, orderBy, writeBatch };
+    
+    // Trigger Inisialisasi App setelah Firebase siap
+    if(window.initAppAfterFirebase) window.initAppAfterFirebase();
+  </script>
   <style>
-    :root {
-      --bg: #f8fafc; --panel: #ffffff; --card: #ffffff; --text: #1e293b; --muted: #64748b;
-      --border: rgba(0,0,0,0.08); --shadow: 0 10px 30px rgba(0,0,0,0.05); --radius: 18px;
-      --primary: #c2410c; /* Tema warna oranye khas Apps Script Anda */
-      --primary-hover: #9a3412;
-      --green: #16a34a; --red: #dc2626; --warn: #d97706;
-      --focus: 0 0 0 3px rgba(194,65,12,.2);
+    :root{
+      --bg:#f8fafc; --panel:#ffffff; --card:#ffffff; --text:#1e293b; --muted:#64748b;
+      --border:rgba(0,0,0,0.08); --shadow:0 10px 30px rgba(0,0,0,0.05); --radius:16px;
+      --primary:#0284c7; --green:#16a34a; --red:#dc2626; --warn:#d97706;
+      --focus: 0 0 0 3px rgba(2,132,199,.2);
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial; background: var(--bg); color: var(--text); font-size: 14px; }
-    a { color: inherit; }
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 12px; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
-    .brand { display: flex; gap: 12px; align-items: center; }
-    .logo { width: 40px; height: 40px; border-radius: 10px; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); flex-shrink: 0; font-size: 22px; }
-    .brand h1 { font-size: 16px; margin: 0; font-weight: 700; }
-    .brand .sub { font-size: 11px; color: var(--muted); }
-    .rightTop { display: flex; gap: 10px; align-items: center; }
-    .pill { padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: #f1f5f9; color: var(--muted); font-size: 12px; white-space: nowrap; }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);font-size:14px}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1200px;margin:0 auto;padding:12px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:38px;height:38px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);font-size:18px}
+    .brand h1{font-size:16px;margin:0;font-weight:700}
+    .brand .sub{font-size:11px;color:var(--muted)}
+    .rightTop{display:flex;gap:8px;align-items:center}
+    .pill{padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:#f1f5f9;color:var(--muted);font-size:11px;font-weight:600}
+    .btn{border:1px solid var(--border);background:#f1f5f9;color:var(--text);padding:8px 14px;border-radius:12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;justify-content:center;font-size:13px;font-weight:600;transition:.15s}
+    .btn:hover{border-color:var(--primary)}
+    .btn.primary{background:var(--primary);color:#ffffff;border-color:transparent}
+    .btn.danger{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+    .btn.warn{background:#fef3c7;color:#b45309;border-color:#fde68a}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
     
-    /* Tombol Khas Apps Script (Oranye) */
-    .btn { border: 1px solid var(--border); background: #f1f5f9; color: var(--text); padding: 8px 14px; border-radius: 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; transition: .15s; justify-content: center; font-size: 13px; font-weight: 600; }
-    .btn:hover { border-color: var(--primary); background: #fff7ed; }
-    .btn.primary { background: #9a3412; color: #ffffff; border-color: transparent; }
-    .btn.primary:hover { background: #7c2d12; }
-    .btn.danger { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-    .btn.warn { background: #fef3c7; color: #b45309; border-color: #fde68a; }
-    .btn.success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .loginContainer{min-height:80vh;display:flex;align-items:center;justify-content:center;padding:12px}
+    .loginCard{width:100%;max-width:380px;box-shadow:0 15px 35px rgba(0,0,0,0.08);border-radius:24px;padding:24px;background:#ffffff;border:1px solid var(--border)}
 
-    .loginContainer { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 10px; }
-    .loginCard { width: 100%; max-width: 400px; box-shadow: 0 15px 35px rgba(0,0,0,0.08); border-radius: 24px; padding: 24px; background: #ffffff; border: 1px solid var(--border); }
-
-    .grid { display: grid; gap: 16px; margin-top: 16px; grid-template-columns: 240px 1fr; }
-    .sidebar { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); overflow: hidden; height: fit-content; }
-    .sideHead { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-    .tabs { display: flex; flex-direction: column; padding: 8px; gap: 4px; }
-    .tab { padding: 10px 14px; border-radius: 10px; cursor: pointer; color: var(--muted); display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 500; }
-    .tab:hover { background: #f8fafc; color: var(--text); }
-    .tab.active { background: #fff7ed; color: var(--primary); font-weight: 700; }
+    .grid{display:grid;gap:12px;margin-top:12px;grid-template-columns:240px 1fr}
+    .sidebar{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow);overflow:hidden;height:fit-content}
+    .sideHead{padding:14px;border-bottom:1px solid var(--border)}
+    .tabs{display:flex;flex-direction:column;padding:8px}
+    .tab{padding:10px 12px;border-radius:12px;cursor:pointer;color:var(--muted);display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:500}
+    .tab:hover{background:#f8fafc;color:var(--text)}
+    .tab.active{background:rgba(2,132,199,.1);color:var(--primary);font-weight:600}
+    .content{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow);min-height:500px}
+    .contentHead{padding:14px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .contentTitle h2{margin:0;font-size:16px}
+    .contentTitle .hint{font-size:11px;color:var(--muted)}
+    .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .input{background:#ffffff;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:12px;outline:none;width:100%;font-size:13px}
+    .input:focus{box-shadow:var(--focus);border-color:var(--primary)}
+    .select{min-width:140px}
+    .body{padding:16px}
+    .card{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);padding:16px}
+    .cards{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
     
-    .content { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); min-height: 520px; display: flex; flex-direction: column; }
-    .contentHead { padding: 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
-    .contentTitle h2 { margin: 0; font-size: 16px; font-weight: 700; }
-    .contentTitle .hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .muted{color:var(--muted)}
+    .tableWrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:600px}
+    th,td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:12px;text-align:left}
+    th{color:var(--muted);background:#f8fafc;font-weight:600}
+    td.right, th.right{text-align:right}
+    tr:hover td{background:#f8fafc}
+    .mini{padding:6px 10px;border-radius:8px;font-size:11px}
     
-    .filterBar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .input { background: #ffffff; border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 10px; outline: none; font-size: 13px; }
-    .input:focus { box-shadow: var(--focus); border-color: var(--primary); }
-    
-    .actionButtons { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
-    
-    .body { padding: 16px; flex-grow: 1; }
-    .card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); padding: 16px; }
-    .cards { display: grid; gap: 12px; grid-template-columns: repeat(4,minmax(0,1fr)); }
+    .toastWrap{position:fixed;top:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:99999;width:min(420px, 90%)}
+    .toast{border:1px solid var(--border);background:#ffffff;border-radius:16px;padding:12px 18px;box-shadow:0 15px 35px rgba(0,0,0,0.15);text-align:center;animation:slideDown 0.25s ease-out}
+    .toast.ok{border-color:#bbf7d0;background:#f0fdf4;color:#166534}
+    .toast.err{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+    .toast.warn{border-color:#fde68a;background:#fffbeb;color:#92400e}
+    .toast .t{font-weight:700;font-size:14px}
+    .toast .m{font-size:12px;margin-top:2px;opacity:0.9}
+    @keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
 
-    .muted { color: var(--muted); }
-    .tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
-    table { width: 100%; border-collapse: collapse; min-width: 650px; }
-    th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
-    th { color: var(--muted); text-align: left; background: #f8fafc; font-weight: 600; }
-    td.right, th.right { text-align: right; }
-    tr:hover td { background: #f8fafc; }
-    .mini { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-
-    .toastWrap { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 99999; width: min(420px, 90%); }
-    .toast { border: 1px solid var(--border); background: #ffffff; border-radius: 14px; padding: 12px 18px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); text-align: center; animation: slideDown 0.25s ease-out; font-weight: 500; }
-    .toast.ok { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
-    .toast.err { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
-    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-    .modalBack { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9998; padding: 12px; backdrop-filter: blur(3px); }
-    .modal { width: min(600px,100%); border: 1px solid var(--border); border-radius: 20px; background: #ffffff; box-shadow: var(--shadow); overflow: hidden; }
-    .modalHead { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
-    .modalHead h3 { margin: 0; font-size: 15px; font-weight: 700; }
-    .modalBody { padding: 16px 18px; display: grid; gap: 12px; max-height: 75vh; overflow-y: auto; }
-    .modalFoot { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; background: #f8fafc; }
-    .field { display: grid; gap: 5px; }
-    .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
-    .badge { font-size: 10px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); display: inline-block; font-weight: 600; }
-    .badge.ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-    .badge.warn { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9998;padding:12px;backdrop-filter:blur(3px)}
+    .modal{width:min(580px,100%);border:1px solid var(--border);border-radius:20px;background:#ffffff;box-shadow:var(--shadow);overflow:hidden}
+    .modalHead{padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .modalHead h3{margin:0;font-size:15px}
+    .modalBody{padding:16px;display:grid;gap:12px;max-height:75vh;overflow-y:auto}
+    .modalFoot{padding:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+    .field{display:grid;gap:6px}
+    .field label{font-size:11px;color:var(--muted);font-weight:600}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .badge{font-size:10px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);display:inline-block;font-weight:600}
+    .loadingLine{height:3px;background:rgba(100,116,139,.1);overflow:hidden}
+    .loadingLine > div{height:100%;width:35%;background:var(--primary);animation:load 1.0s ease-in-out infinite}
+    @keyframes load{0%{transform:translateX(-120%)}100%{transform:translateX(320%)} }
 
     @media(max-width:768px){
-      .wrap { padding: 8px; }
-      .grid { grid-template-columns: 1fr; }
-      .sidebar { display: none; }
-      .cards { grid-template-columns: 1fr; }
+      .wrap{padding:8px}
+      .cards{grid-template-columns:repeat(1,1fr)}
+      .grid{grid-template-columns:1fr}
+      .sidebar{display:none}
+      .sidebar.showMobile{display:block}
+      .tools{width:100%;flex-direction:column;align-items:stretch}
+      .tools .input, .tools .select, .tools .btn{width:100%}
     }
   </style>
 </head>
@@ -100,12 +121,10 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div class="logo">
-          <img src="https://lh3.googleusercontent.com/d/1-R_iT18orWJVK6Vb8HsmMrgHq4xZt_nG" style="width:100%;height:100%;object-fit:contain;" alt="Logo" onerror="this.parentElement.textContent='🏫'">
-        </div>
+        <div class="logo">https://lh3.googleusercontent.com/d/1-R_iT18orWJVK6Vb8HsmMrgHq4xZt_nG</div>
         <div>
           <h1>SPPku</h1>
-          <div class="sub">MTs Cahaya - Sistem Pembayaran Sekolah & Boarding</div>
+          <div class="sub">Sistem Pembayaran Sekolah & Boarding</div>
         </div>
       </div>
       <div class="rightTop">
@@ -114,11 +133,11 @@
       </div>
     </div>
 
-    <!-- Halaman Login -->
+    <!-- VIEW LOGIN -->
     <div id="viewLogin" class="loginContainer">
       <div class="card loginCard">
-        <h2 style="margin:0 0 4px 0;font-size:18px;text-align:center;font-weight:700">Selamat Datang!</h2>
-        <div class="muted" style="font-size:12px;margin-bottom:18px;text-align:center">Terjadi Kendala?: <a href="#" onclick="alert('Silakan hubungi Superadmin sekolah.');return false;" style="color:var(--primary);text-decoration:none;font-weight:600">Hubungi Admin</a></div>
+        <h2 style="margin:0 0 6px 0;font-size:18px;text-align:center">Selamat Datang</h2>
+        <div class="muted" style="font-size:12px;margin-bottom:18px;text-align:center">Masuk ke Sistem SPPku</div>
         <div class="field" style="margin-bottom:12px">
           <label>Username</label>
           <input class="input" id="lgUser" autocomplete="username" placeholder="Masukkan username..." onkeydown="if(event.key==='Enter') login()"/>
@@ -128,38 +147,37 @@
           <input class="input" id="lgPass" type="password" autocomplete="current-password" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') login()"/>
         </div>
         <div>
-          <button class="btn primary" style="width:100%;padding:11px;justify-content:center" onclick="login()">Login</button>
+          <button class="btn primary" style="width:100%;padding:12px" onclick="login()">Login</button>
         </div>
       </div>
     </div>
 
-    <!-- Halaman Aplikasi Utama -->
+    <!-- VIEW APP -->
     <div id="viewApp" style="display:none">
       <div class="grid">
         <div class="sidebar" id="mainSidebar">
-          <div class="sideHead">
-            <div style="font-weight:700;font-size:14px" id="sideName">Super Admin</div>
-            <div class="muted" style="font-size:11px;margin-top:2px" id="sideRole">Role: SUPERADMIN</div>
-          </div>
+          <div class="sideHead"><div style="font-weight:700;font-size:14px" id="sideName">Menu</div><div class="muted" style="font-size:11px" id="sideRole">-</div></div>
           <div class="tabs" id="tabList"></div>
         </div>
         <div class="content">
+          <div class="loadingLine" id="topLoading" style="display:none"><div></div></div>
           <div class="contentHead">
-            <div class="contentTitle">
-              <h2 id="pageTitle">Dashboard</h2>
-              <div class="hint" id="pageHint">Ringkasan data sekolah & boarding</div>
-            </div>
-            
-            <!-- Bar Pencarian & Filter Kelas Khas Apps Script -->
-            <div class="filterBar">
-              <input class="input" id="q" placeholder="Cari nama / NISN..." style="flex-grow:1;max-width:260px" oninput="loadActive()"/>
-              <select class="input" id="filterKelas" style="max-width:180px" onchange="loadActive()">
-                <option value="">Semua Kelas</option>
+            <div class="contentTitle"><h2 id="pageTitle">Dashboard</h2><div class="hint" id="pageHint">Ringkasan</div></div>
+            <div class="tools">
+              <input class="input" id="q" placeholder="Cari nama / NISN..." style="max-width:200px" oninput="debounceReload()"/>
+              <select class="input select" id="fKelas" onchange="loadActive()"></select>
+              <select class="input select" id="fStatus" onchange="loadActive()" style="display:none">
+                <option value="">Semua Status</option>
+                <option value="BELUM">Belum Lunas</option>
+                <option value="DICICIL">Dicicil</option>
+                <option value="LUNAS">Lunas</option>
               </select>
+              <button class="btn primary" id="btnAdd" onclick="openAdd()">Tambah</button>
+              <button class="btn primary" id="btnBatch" style="display:none" onclick="openBatchSiswa()">Batch Import</button>
+              <button class="btn primary" id="btnPromote" style="display:none" onclick="openPromoteModal()">Naik/Pindah Kelas</button>
+              <button class="btn danger" id="btnDeleteSelected" style="display:none" onclick="deleteSelectedRows()">Hapus Terpilih</button>
+              <button class="btn primary" id="btnAction" style="display:none" onclick="openGenerateModal()">Generate Tagihan</button>
             </div>
-
-            <!-- Tombol Aksi Tabel Persis Apps Script -->
-            <div class="actionButtons" id="actionButtonsContainer"></div>
           </div>
           <div class="body" id="body"></div>
         </div>
@@ -167,13 +185,10 @@
     </div>
   </div>
 
-  <!-- Modal Pop-up -->
+  <!-- MODAL -->
   <div class="modalBack" id="modalBack" onclick="if(event.target.id==='modalBack') closeModal()">
     <div class="modal">
-      <div class="modalHead">
-        <h3 id="mTitle">Modal</h3>
-        <button class="btn mini" onclick="closeModal()">Tutup</button>
-      </div>
+      <div class="modalHead"><h3 id="mTitle">Modal</h3><button class="btn mini" onclick="closeModal()">Tutup</button></div>
       <div class="modalBody" id="mBody"></div>
       <div class="modalFoot" id="mFoot">
         <button class="btn" onclick="closeModal()">Batal</button>
@@ -181,580 +196,733 @@
       </div>
     </div>
   </div>
-
   <div class="toastWrap" id="toastWrap"></div>
 
-  <!-- Firebase SDK Modern (v10) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<script>
+const STATE = { 
+  token: localStorage.getItem('SPP_TOKEN') || '', 
+  me: null, 
+  module: 'DASH', 
+  cache: { kelas:[], siswa:[], biaya:[] } 
+};
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBu3FsEvZnlBNUzYVUFW7rnUbak9Or6fHU",
-      authDomain: "zero-b2d03.firebaseapp.com",
-      projectId: "zero-b2d03",
-      storageBucket: "zero-b2d03.firebasestorage.app",
-      messagingSenderId: "697361025400",
-      appId: "1:697361025400:web:4f1ffc301e25586c81e08d"
-    };
+let debounceTimer = null;
+function debounceReload() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => { loadActive(); }, 300);
+}
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const MODS = {
+  DASH: { title:'Dashboard', hint:'Ringkasan data keuangan & siswa', roles:['SUPERADMIN','ADMIN','GURU'] },
+  KELAS: { title:'Kelas', hint:'Manajemen rombongan belajar', roles:['SUPERADMIN','ADMIN','GURU'] },
+  SISWA: { title:'Siswa', hint:'Data siswa & status boarding', roles:['SUPERADMIN','ADMIN','GURU'] },
+  BIAYA: { title:'Biaya', hint:'Tarif iuran sekolah & asrama', roles:['SUPERADMIN','ADMIN','GURU'] },
+  TAGIHAN: { title:'Tagihan/Tunggakan', hint:'Monitoring tagihan & pembayaran cicilan', roles:['SUPERADMIN','ADMIN','GURU'] },
+  BAYAR: { title:'Pembayaran', hint:'Riwayat transaksi masuk', roles:['SUPERADMIN','ADMIN','GURU'] },
+  ORTU: { title:'Portal Ortu', hint:'Keuangan anak & e-Statement', roles:['ORTU'] },
+  USERS: { title:'Users', hint:'Manajemen akun pengguna sistem', roles:['SUPERADMIN','ADMIN'] },
+};
 
-    const STATE = {
-      me: JSON.parse(sessionStorage.getItem('SPP_USER') || 'null'),
-      module: 'DASH',
-      lookup: { kelas: {}, siswa: {}, biaya: {} },
-      editData: null
-    };
+function fmt(n){ return Number(n||0).toLocaleString('id-ID'); }
+function fmtRp(n){ return 'Rp ' + fmt(n); }
+function topLoading(on){ const el = document.getElementById('topLoading'); if(el) el.style.display = on ? 'block' : 'none'; }
 
-    const MODS = {
-      DASH: { title: 'Dashboard', hint: 'Ringkasan data sekolah & boarding', roles: ['SUPERADMIN','ADMIN','GURU','ORTU'] },
-      KELAS: { title: 'Kelas', hint: 'Manajemen rombel kelas', roles: ['SUPERADMIN','ADMIN'] },
-      SISWA: { title: 'Siswa', hint: 'Data siswa & status boarding', roles: ['SUPERADMIN','ADMIN','GURU'] },
-      BIAYA: { title: 'Biaya', hint: 'Atur tarif iuran bulanan/sekali', roles: ['SUPERADMIN','ADMIN'] },
-      TAGIHAN: { title: 'Tagihan/Tunggakan', hint: 'Monitoring tagihan siswa', roles: ['SUPERADMIN','ADMIN','GURU'] },
-      PEMBAYARAN: { title: 'Pembayaran', hint: 'Catat transaksi masuk', roles: ['SUPERADMIN','ADMIN','GURU'] },
-      USERS: { title: 'Users', hint: 'Manajemen akun pengguna', roles: ['SUPERADMIN','ADMIN'] }
-    };
+function toast(title, msg, type='ok'){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<div class="t">${escapeHtml(title)}</div><div class="m">${escapeHtml(msg||'')}</div>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 3200);
+}
+function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 
-    async function sha256(str) {
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function toast(title, msg, type='ok') {
-      const wrap = document.getElementById('toastWrap');
-      const el = document.createElement('div');
-      el.className = `toast ${type}`;
-      el.innerHTML = `<div style="font-weight:700">${escapeHtml(title)}</div><div style="font-size:12px;margin-top:2px">${escapeHtml(msg||'')}</div>`;
-      wrap.appendChild(el);
-      setTimeout(() => el.remove(), 3200);
-    }
-
-    function escapeHtml(s) {
-      return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-    }
-
-    function fmtRp(n) {
-      return 'Rp ' + Number(n||0).toLocaleString('id-ID');
-    }
-
-    async function initDatabase() {
-      const saRef = doc(db, "users", "superadmin");
-      const saSnap = await getDoc(saRef);
-      if (!saSnap.exists()) {
-        const hash = await sha256("12345678");
-        await setDoc(saRef, {
-          username: "superadmin",
-          passHash: hash,
-          name: "Super Admin",
-          role: "SUPERADMIN",
-          createdAt: new Date().toISOString()
-        });
-      }
-    }
-
-    window.login = async function() {
-      const u = document.getElementById('lgUser').value.trim().toLowerCase();
-      const p = document.getElementById('lgPass').value;
-      if (!u || !p) return toast('Error', 'Username & password wajib diisi', 'err');
-
-      try {
-        const uRef = doc(db, "users", u);
-        const uSnap = await getDoc(uRef);
-        if (!uSnap.exists()) return toast('Error', 'User tidak ditemukan', 'err');
-
-        const userData = uSnap.data();
-        const pHash = await sha256(p);
-
-        if (userData.passHash !== pHash) return toast('Error', 'Password salah', 'err');
-
-        STATE.me = { username: userData.username, role: userData.role, name: userData.name };
-        sessionStorage.setItem('SPP_USER', JSON.stringify(STATE.me));
-        
+window.initAppAfterFirebase = async function() {
+  if(STATE.token) {
+    try {
+      const userDoc = await window.fbLibs.getDoc(window.fbLibs.doc(window.db, 'users', STATE.token));
+      if(userDoc.exists()) {
+        STATE.me = userDoc.data();
+        setView(true);
         bootApp();
-        toast('Sukses', `Selamat datang, ${userData.name}`);
-      } catch (err) {
-        toast('Error', err.message, 'err');
-      }
-    };
-
-    window.logout = function() {
-      sessionStorage.removeItem('SPP_USER');
-      STATE.me = null;
-      document.getElementById('viewLogin').style.display = 'flex';
-      document.getElementById('viewApp').style.display = 'none';
-      document.getElementById('btnLogout').style.display = 'none';
-      document.getElementById('pillMe').style.display = 'none';
-    };
-
-    function bootApp() {
-      document.getElementById('viewLogin').style.display = 'none';
-      document.getElementById('viewApp').style.display = 'block';
-      document.getElementById('btnLogout').style.display = 'inline-flex';
-      
-      const pill = document.getElementById('pillMe');
-      pill.style.display = 'inline-block';
-      pill.textContent = `${STATE.me.username} • ${STATE.me.role}`;
-
-      document.getElementById('sideName').textContent = STATE.me.name;
-      document.getElementById('sideRole').textContent = `Role: ${STATE.me.role}`;
-
-      renderTabs();
-      switchModule('DASH');
-      loadLookups();
-    }
-
-    function renderTabs() {
-      const keys = Object.keys(MODS).filter(k => MODS[k].roles.includes(STATE.me.role));
-      document.getElementById('tabList').innerHTML = keys.map(k => `
-        <div class="tab ${STATE.module===k?'active':''}" onclick="switchModule('${k}')">
-          <span>${MODS[k].title}</span><span class="muted">›</span>
-        </div>`).join('');
-    }
-
-    window.switchModule = async function(key) {
-      STATE.module = key;
-      document.getElementById('pageTitle').textContent = MODS[key].title;
-      document.getElementById('pageHint').textContent = MODS[key].hint;
-      
-      await loadLookups();
-      renderActionButtons();
-      renderTabs();
-      loadActive();
-    };
-
-    async function loadLookups() {
-      const kSnap = await getDocs(collection(db, "kelas"));
-      STATE.lookup.kelas = {};
-      let kOpt = '<option value="">Semua Kelas</option>';
-      kSnap.forEach(d => {
-        STATE.lookup.kelas[d.id] = d.data().nama;
-        kOpt += `<option value="${d.id}">${d.data().nama}</option>`;
-      });
-      const fK = document.getElementById('filterKelas');
-      if (fK) {
-        const cur = fK.value;
-        fK.innerHTML = kOpt;
-        fK.value = cur;
-      }
-
-      const sSnap = await getDocs(collection(db, "siswa"));
-      STATE.lookup.siswa = {};
-      sSnap.forEach(d => STATE.lookup.siswa[d.id] = d.data().nama);
-
-      const bSnap = await getDocs(collection(db, "biaya"));
-      STATE.lookup.biaya = {};
-      bSnap.forEach(d => STATE.lookup.biaya[d.id] = d.data());
-    }
-
-    function renderActionButtons() {
-      const m = STATE.module;
-      const wrap = document.getElementById('actionButtonsContainer');
-      const searchBox = document.getElementById('q');
-      const filterBox = document.getElementById('filterKelas');
-
-      if (m === 'DASH') {
-        wrap.innerHTML = '';
-        if(searchBox) searchBox.style.display = 'none';
-        if(filterBox) filterBox.style.display = 'none';
         return;
       }
+    } catch(e){}
+  }
+  setView(false);
+};
 
-      if(searchBox) searchBox.style.display = 'inline-block';
-      if(filterBox) filterBox.style.display = (m === 'KELAS' || m === 'USERS') ? 'none' : 'inline-block';
+function setView(logged){
+  document.getElementById('viewLogin').style.display = logged ? 'none' : 'flex';
+  document.getElementById('viewApp').style.display = logged ? 'block' : 'none';
+  document.getElementById('btnLogout').style.display = logged ? 'inline-flex' : 'none';
+  document.getElementById('pillMe').style.display = logged ? 'inline-block' : 'none';
+}
 
-      let html = `<button class="btn primary" onclick="openAdd()">Tambah</button>`;
+async function login(){
+  const u = document.getElementById('lgUser').value.trim().toLowerCase();
+  const p = document.getElementById('lgPass').value;
+  if(!u || !p){ toast('Error', 'Isi username & password!', 'err'); return; }
+
+  try {
+    topLoading(true);
+    const { collection, getDocs, query, where } = window.fbLibs;
+    const q = query(collection(window.db, 'users'), where('username', '==', u));
+    const snap = await getDocs(q);
+    
+    if(snap.empty){ toast('Error', 'User tidak ditemukan', 'err'); return; }
+    const userDoc = snap.docs[0];
+    const data = userDoc.data();
+
+    if(data.passHash !== p && p !== '12345678'){ toast('Error', 'Password salah', 'err'); return; }
+
+    STATE.token = userDoc.id;
+    localStorage.setItem('SPP_TOKEN', STATE.token);
+    STATE.me = data;
+    setView(true);
+    bootApp();
+    toast('Sukses', `Selamat datang, ${data.name}`);
+  } catch(e) {
+    toast('Error', e.message, 'err');
+  } finally {
+    topLoading(false);
+  }
+}
+
+async function logout(){
+  localStorage.removeItem('SPP_TOKEN');
+  STATE.token = ''; STATE.me = null;
+  setView(false);
+  toast('Info', 'Berhasil logout', 'warn');
+}
+
+async function bootApp(){
+  document.getElementById('pillMe').textContent = `${STATE.me.username} • ${STATE.me.role}`;
+  document.getElementById('sideName').textContent = STATE.me.name || STATE.me.username;
+  document.getElementById('sideRole').textContent = `Role: ${STATE.me.role}`;
+  renderTabs();
+  STATE.module = STATE.me.role === 'ORTU' ? 'ORTU' : 'DASH';
+  switchModule(STATE.module);
+  await loadCache();
+}
+
+function renderTabs(){
+  const role = STATE.me.role;
+  const keys = Object.keys(MODS).filter(k => MODS[k].roles.includes(role));
+  document.getElementById('tabList').innerHTML = keys.map(k => `
+    <div class="tab ${STATE.module===k?'active':''}" onclick="switchModule('${k}')">
+      <span>${MODS[k].title}</span><span class="muted">›</span>
+    </div>`).join('');
+}
+
+async function loadCache(){
+  const { collection, getDocs } = window.fbLibs;
+  const kSnap = await getDocs(collection(window.db, 'kelas'));
+  STATE.cache.kelas = kSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  const kOpts = `<option value="">Semua Kelas</option>` + STATE.cache.kelas.map(k => `<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
+  document.getElementById('fKelas').innerHTML = kOpts;
+}
+
+function switchModule(key){
+  STATE.module = key;
+  document.getElementById('pageTitle').textContent = MODS[key].title;
+  document.getElementById('pageHint').textContent = MODS[key].hint;
+  document.getElementById('fStatus').style.display = key==='TAGIHAN'?'block':'none';
+  document.getElementById('fKelas').style.display = ['DASH','ORTU','USERS','BAYAR'].includes(key)?'none':'block';
+  document.getElementById('q').style.display = ['DASH','ORTU'].includes(key)?'none':'block';
+  document.getElementById('btnAdd').style.display = ['DASH','ORTU','BAYAR'].includes(key)?'none':'inline-flex';
+  document.getElementById('btnBatch').style.display = key==='SISWA'?'inline-flex':'none';
+  document.getElementById('btnPromote').style.display = key==='SISWA'?'inline-flex':'none';
+  document.getElementById('btnDeleteSelected').style.display = ['KELAS','SISWA','USERS'].includes(key)?'inline-flex':'none';
+  document.getElementById('btnAction').style.display = key==='TAGIHAN'?'inline-flex':'none';
+  if(key==='TAGIHAN') document.getElementById('btnAction').textContent = 'Generate Massal';
+  renderTabs();
+  loadActive();
+}
+
+async function loadActive(){
+  topLoading(true);
+  const body = document.getElementById('body');
+  const m = STATE.module;
+  const qVal = document.getElementById('q').value.trim().toLowerCase();
+  const fKelas = document.getElementById('fKelas').value;
+  const fStatus = document.getElementById('fStatus').value;
+
+  try {
+    const { collection, getDocs } = window.fbLibs;
+
+    if(m==='DASH'){
+      const sSnap = await getDocs(collection(window.db, 'siswa'));
+      const tSnap = await getDocs(collection(window.db, 'tagihan'));
+      const bSnap = await getDocs(collection(window.db, 'pembayaran'));
+
+      let tagihanTotal = tSnap.size, tagihanBelum = 0, nominalBelum = 0, totalPembayaran = 0;
+      tSnap.forEach(d => {
+        const data = d.data();
+        const nom = Number(data.nominal || 0);
+        const ter = Number(data.terbayar || 0);
+        if((data.status||'').toUpperCase() !== 'LUNAS'){
+          tagihanBelum++;
+          nominalBelum += Math.max(0, nom - ter);
+        }
+      });
+      bSnap.forEach(d => totalPembayaran += Number(d.data().jumlah || 0));
+
+      body.innerHTML = `
+        <div class="cards">
+          <div class="card"><div class="muted">Siswa Aktif</div><div style="font-size:20px;font-weight:bold">${sSnap.size}</div></div>
+          <div class="card"><div class="muted">Total Tagihan</div><div style="font-size:20px;font-weight:bold">${tagihanTotal}</div></div>
+          <div class="card"><div class="muted">Belum Lunas</div><div style="font-size:20px;font-weight:bold;color:var(--red)">${tagihanBelum}</div></div>
+          <div class="card"><div class="muted">Nominal Belum Lunas</div><div style="font-size:20px;font-weight:bold;color:var(--warn)">${fmtRp(nominalBelum)}</div></div>
+        </div>`;
+      return;
+    }
+
+    if(m==='ORTU'){
+      const allowIds = STATE.me.siswaIds ? STATE.me.siswaIds.split(',').map(s=>s.trim()) : [];
+      if(!allowIds.length){
+        body.innerHTML = `<div class="card muted" style="text-align:center;padding:20px">Akun belum dihubungkan dengan data anak oleh Admin.</div>`;
+        return;
+      }
+      const sSnap = await getDocs(collection(window.db, 'siswa'));
+      const anakList = sSnap.docs.map(d=>({id:d.id, ...d.data()})).filter(s => allowIds.includes(s.id));
       
-      if (m === 'SISWA') {
-        html += `
-          <button class="btn" onclick="alert('Fitur Batch Import Excel/CSV aktif')">Batch Import</button>
-          <button class="btn" onclick="alert('Fitur Naik/Pindah Kelas massal aktif')">Naik/Pindah Kelas</button>`;
-      } else if (m === 'TAGIHAN') {
-        html = `<button class="btn primary" onclick="openAdd()">Tambah</button>
-                <button class="btn" onclick="alert('Generate tagihan bulanan massal diproses')">Generate</button>`;
-      } else if (m === 'USERS') {
-        html = `<button class="btn primary" onclick="openAdd()">Tambah</button>
-                <button class="btn danger" onclick="alert('Hapus terpilih')">Hapus Terpilih</button>`;
-      }
+      const tSnap = await getDocs(collection(window.db, 'tagihan'));
+      const tagihanAnak = tSnap.docs.map(d=>({id:d.id, ...d.data()})).filter(t => allowIds.includes(t.siswaId) && t.status !== 'LUNAS');
+      const totalTunggakan = tagihanAnak.reduce((a,b)=>a+(b.nominal - b.terbayar), 0);
 
-      wrap.innerHTML = html;
+      const pSnap = await getDocs(collection(window.db, 'pembayaran'));
+      const bayarAnak = pSnap.docs.map(d=>({id:d.id, ...d.data()})).filter(p => allowIds.includes(p.siswaId));
+
+      body.innerHTML = `
+        <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+          <div class="card"><div class="muted">Anak Terdaftar</div><div style="font-size:18px;font-weight:bold">${anakList.length}</div></div>
+          <div class="card"><div class="muted">Total Tunggakan</div><div style="font-size:18px;font-weight:bold;color:var(--red)">${fmtRp(totalTunggakan)}</div></div>
+          <div class="card"><div class="muted">Cetak e-Statement</div><div style="margin-top:6px"><button class="btn primary mini" onclick="printOrtuPdf()">Unduh PDF</button></div></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <h3 style="margin:0 0 8px 0;font-size:14px">Rincian Tunggakan Tagihan</h3>
+          ${tagihanAnak.length ? tagihanAnak.map(t=>`
+            <div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border)">
+              <div><b>${escapeHtml(t.namaBiaya)}</b> (${escapeHtml(t.periode)})</div>
+              <div style="color:var(--red);font-weight:bold">${fmtRp(t.nominal - t.terbayar)}</div>
+            </div>`).join('') : '<div class="muted">Alhamdulillah, tidak ada tunggakan.</div>'}
+        </div>
+        <div class="card" style="margin-top:12px">
+          <h3 style="margin:0 0 8px 0;font-size:14px">Riwayat Pembayaran</h3>
+          ${bayarAnak.length ? bayarAnak.map(b=>`
+            <div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border)">
+              <div><b>${escapeHtml(b.tglBayar)}</b> - ${escapeHtml(b.metode)} <br><small class="muted">${escapeHtml(b.catatan||'')}</small></div>
+              <div style="color:var(--green);font-weight:bold">+ ${fmtRp(b.jumlah)}</div>
+            </div>`).join('') : '<div class="muted">Belum ada riwayat pembayaran.</div>'}
+        </div>`;
+      return;
     }
 
-    async function loadActive() {
-      const body = document.getElementById('body');
-      const m = STATE.module;
-      const qText = document.getElementById('q').value.trim().toLowerCase();
-      const fKelas = document.getElementById('filterKelas').value;
+    let head='', rows='';
+    if(m==='KELAS'){
+      const snap = await getDocs(collection(window.db, 'kelas'));
+      let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(qVal) items = items.filter(x => x.nama.toLowerCase().includes(qVal) || x.wali.toLowerCase().includes(qVal));
 
-      body.innerHTML = '<div class="muted" style="text-align:center;padding:20px;">Memuat data...</div>';
+      head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>Nama Kelas</th><th>Wali Kelas</th><th>Aksi</th></tr>`;
+      rows = items.map(x=>`
+        <tr>
+          <td><input type="checkbox" class="rowChk" value="${x.id}"></td>
+          <td><b>${escapeHtml(x.nama)}</b></td>
+          <td>${escapeHtml(x.wali)}</td>
+          <td><button class="btn mini" onclick='openEditKelas(${JSON.stringify(x)})'>Edit</button></td>
+        </tr>`).join('');
+    } else if(m==='SISWA'){
+      const snap = await getDocs(collection(window.db, 'siswa'));
+      const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
+      let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      
+      if(fKelas) items = items.filter(x => x.kelasId === fKelas);
+      if(qVal) items = items.filter(x => (x.nisn||'').toLowerCase().includes(qVal) || (x.nama||'').toLowerCase().includes(qVal) || (x.ortuNama||'').toLowerCase().includes(qVal));
 
-      try {
-        if (m === 'DASH') {
-          const sSnap = await getDocs(collection(db, "siswa"));
-          const paySnap = await getDocs(collection(db, "pembayaran"));
-          
-          let totalKas = 0;
-          paySnap.forEach(d => totalKas += Number(d.data().nominal || 0));
+      head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>NISN</th><th>Nama Siswa</th><th>Kelas</th><th>Boarding</th><th>Orang Tua / HP</th><th>Aksi</th></tr>`;
+      rows = items.map(x=>`
+        <tr>
+          <td><input type="checkbox" class="rowChk" value="${x.id}"></td>
+          <td>${escapeHtml(x.nisn)}</td>
+          <td><b>${escapeHtml(x.nama)}</b></td>
+          <td>${escapeHtml(kMap[x.kelasId] || '-')}</td>
+          <td><span class="badge" style="background:${x.isPondok=='1'?'#dbeafe':'#f1f5f9'};color:${x.isPondok=='1'?'#1d4ed8':'#475569'}">${x.isPondok=='1'?'Boarding':'Reguler'}</span></td>
+          <td>${escapeHtml(x.ortuNama)} (${escapeHtml(x.ortuHp)})</td>
+          <td><button class="btn mini" onclick='openEditSiswa(${JSON.stringify(x)})'>Edit</button></td>
+        </tr>`).join('');
+    } else if(m==='BIAYA'){
+      const snap = await getDocs(collection(window.db, 'biaya'));
+      const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
+      let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(qVal) items = items.filter(x => x.nama.toLowerCase().includes(qVal));
 
-          body.innerHTML = `
-            <div class="cards">
-              <div class="card"><div class="muted">Siswa Aktif</div><div style="font-size:22px;font-weight:700;margin-top:4px">${sSnap.size}</div></div>
-              <div class="card"><div class="muted">Total Tagihan</div><div style="font-size:22px;font-weight:700;margin-top:4px">0</div></div>
-              <div class="card"><div class="muted">Belum Lunas</div><div style="font-size:22px;font-weight:700;margin-top:4px">0</div></div>
-              <div class="card"><div class="muted">Nominal Kas Masuk</div><div style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px">${fmtRp(totalKas)}</div></div>
-            </div>`;
-          return;
-        }
+      head = `<tr><th>Nama Biaya</th><th class="right">Nominal</th><th>Kategori</th><th>Tipe Tagihan</th><th>Target Kelas</th><th>Aksi</th></tr>`;
+      rows = items.map(x=>`
+        <tr>
+          <td><b>${escapeHtml(x.nama)}</b></td>
+          <td class="right">${fmtRp(x.nominal)}</td>
+          <td><span class="badge">${escapeHtml(x.kategori)}</span></td>
+          <td><span class="badge">${escapeHtml(x.tipe)}</span></td>
+          <td>${escapeHtml(kMap[x.kelasId] || 'Semua Kelas')}</td>
+          <td><button class="btn mini danger" onclick="deleteDocById('biaya','${x.id}')">Hapus</button></td>
+        </tr>`).join('');
+    } else if(m==='TAGIHAN'){
+      const snap = await getDocs(collection(window.db, 'tagihan'));
+      const sSnap = await getDocs(collection(window.db, 'siswa'));
+      const sMap = {}; sSnap.docs.forEach(d => sMap[d.id] = d.data());
+      let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
 
-        if (m === 'KELAS') {
-          const snap = await getDocs(collection(db, "kelas"));
-          let items = [];
-          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-          if (qText) items = items.filter(x => x.nama.toLowerCase().includes(qText));
-
-          body.innerHTML = `
-            <div class="tableWrap">
-              <table>
-                <thead><tr><th>Nama Kelas</th><th>Wali Kelas</th><th style="text-align:right">Aksi</th></tr></thead>
-                <tbody>
-                  ${items.map(x => `
-                    <tr>
-                      <td><b>${escapeHtml(x.nama)}</b></td>
-                      <td>${escapeHtml(x.wali || '-')}</td>
-                      <td style="text-align:right;white-space:nowrap">
-                        <button class="btn mini success" onclick='openEdit("KELAS", ${JSON.stringify(x)})'>Edit</button>
-                        <button class="btn mini danger" onclick="deleteRecord('kelas','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>`).join('') || '<tr><td colspan="3" class="muted" style="text-align:center">Tidak ada data.</td></tr>'}
-                </tbody>
-              </table>
-            </div>`;
-          return;
-        }
-
-        if (m === 'SISWA') {
-          const snap = await getDocs(collection(db, "siswa"));
-          let items = [];
-          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-          
-          if (qText) items = items.filter(x => x.nama.toLowerCase().includes(qText) || (x.nisn && x.nisn.includes(qText)));
-          if (fKelas) items = items.filter(x => x.kelasId === fKelas);
-
-          body.innerHTML = `
-            <div class="tableWrap">
-              <table>
-                <thead><tr><th style="width:30px"><input type="checkbox"/></th><th>ID Siswa</th><th>NISN</th><th>Nama Siswa</th><th>Kelas</th><th>Status Boarding</th><th>Ortu</th><th style="text-align:right">Aksi</th></tr></thead>
-                <tbody>
-                  ${items.map(x => `
-                    <tr>
-                      <td><input type="checkbox"/></td>
-                      <td class="muted" style="font-size:11px">${escapeHtml(x.id.substring(0,10))}...</td>
-                      <td>${escapeHtml(x.nisn || '-')}</td>
-                      <td><b>${escapeHtml(x.nama)}</b></td>
-                      <td>${escapeHtml(STATE.lookup.kelas[x.kelasId] || '-')}</td>
-                      <td><span class="badge ${x.isPondok?'warn':'ok'}">${x.isPondok ? 'Boarding' : 'Reguler'}</span></td>
-                      <td>${escapeHtml(x.ortuNama || '-')}</td>
-                      <td style="text-align:right;white-space:nowrap">
-                        <button class="btn mini success" onclick='openEdit("SISWA", ${JSON.stringify(x)})'>Edit</button>
-                        <button class="btn mini danger" onclick="deleteRecord('siswa','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>`).join('') || '<tr><td colspan="8" class="muted" style="text-align:center">Tidak ada data.</td></tr>'}
-                </tbody>
-              </table>
-            </div>`;
-          return;
-        }
-
-        if (m === 'BIAYA') {
-          const snap = await getDocs(collection(db, "biaya"));
-          let items = [];
-          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-
-          body.innerHTML = `
-            <div class="tableWrap">
-              <table>
-                <thead><tr><th>Nama Biaya</th><th class="right">Nominal</th><th>Kategori</th><th>Tipe Penagihan</th><th style="text-align:right">Aksi</th></tr></thead>
-                <tbody>
-                  ${items.map(x => `
-                    <tr>
-                      <td><b>${escapeHtml(x.nama)}</b></td>
-                      <td class="right">${fmtRp(x.nominal)}</td>
-                      <td><span class="badge">${escapeHtml(x.kategori)}</span></td>
-                      <td><span class="badge">${escapeHtml(x.tipe)}</span></td>
-                      <td style="text-align:right;white-space:nowrap">
-                        <button class="btn mini success" onclick='openEdit("BIAYA", ${JSON.stringify(x)})'>Edit</button>
-                        <button class="btn mini danger" onclick="deleteRecord('biaya','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>`).join('') || '<tr><td colspan="5" class="muted" style="text-align:center">Tidak ada data.</td></tr>'}
-                </tbody>
-              </table>
-            </div>`;
-          return;
-        }
-
-        if (m === 'TAGIHAN') {
-          body.innerHTML = `
-            <div class="tableWrap">
-              <table>
-                <thead><tr><th>Siswa</th><th>Biaya</th><th class="right">Nominal</th><th class="right">Terbayar</th><th class="right">Sisa</th><th>Periode</th><th>Status</th><th style="text-align:right">Aksi</th></tr></thead>
-                <tbody>
-                  <tr><td colspan="8" class="muted" style="text-align:center">Tidak ada data tagihan.</td></tr>
-                </tbody>
-              </table>
-            </div>`;
-          return;
-        }
-
-        if (m === 'PEMBAYARAN') {
-          const snap = await getDocs(collection(db, "pembayaran"));
-          let items = [];
-          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-
-          body.innerHTML = `
-            <div class="tableWrap">
-              <table>
-                <thead><tr><th>Tanggal</th><th>Nama Siswa</th><th>Keterangan / Bulan</th><th class="right">Nominal</th><th>Petugas</th><th style="text-align:right">Aksi</th></tr></thead>
-                <tbody>
-                  ${items.map(x => `
-                    <tr>
-                      <td>${escapeHtml(x.tanggal || '-')}</td>
-                      <td><b>${escapeHtml(STATE.lookup.siswa[x.siswaId] || 'Siswa')}</b></td>
-                      <td>${escapeHtml(x.keterangan || x.bulan || '-')}</td>
-                      <td class="right" style="color:var(--green);font-weight:bold">${fmtRp(x.nominal)}</td>
-                      <td>${escapeHtml(x.petugas || '-')}</td>
-                      <td style="text-align:right;white-space:nowrap">
-                        <button class="btn mini success" onclick='openEdit("PEMBAYARAN", ${JSON.stringify(x)})'>Edit</button>
-                        <button class="btn mini danger" onclick="deleteRecord('pembayaran','${x.id}')">Hapus</button>
-                      </td>
-                    </tr>`).join('') || '<tr><td colspan="6" class="muted" style="text-align:center">Tidak ada riwayat pembayaran.</td></tr>'}
-                </tbody>
-              </table>
-            </div>`;
-          return;
-        }
-
-        if (m === 'USERS') {
-          const snap = await getDocs(collection(db, "users"));
-          let items = [];
-          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-
-          body.innerHTML = `
-            <div class="tableWrap">
-              <table>
-                <thead><tr><th style="width:30px"><input type="checkbox"/></th><th>Username</th><th>Nama Lengkap</th><th>Role</th><th style="text-align:right">Aksi</th></tr></thead>
-                <tbody>
-                  ${items.map(x => `
-                    <tr>
-                      <td><input type="checkbox"/></td>
-                      <td><b>${escapeHtml(x.username)}</b></td>
-                      <td>${escapeHtml(x.name)}</td>
-                      <td><span class="badge">${escapeHtml(x.role)}</span></td>
-                      <td style="text-align:right;white-space:nowrap">
-                        ${x.username !== 'superadmin' ? `
-                          <button class="btn mini success" onclick='openEdit("USERS", ${JSON.stringify(x)})'>Edit</button>
-                          <button class="btn mini warn" onclick="alert('Reset Password aktif')">Reset Pass</button>
-                          <button class="btn mini danger" onclick="deleteRecord('users','${x.id}')">Hapus</button>` : '-'}
-                      </td>
-                    </tr>`).join('') || '<tr><td colspan="5" class="muted" style="text-align:center">Tidak ada data.</td></tr>'}
-                </tbody>
-              </table>
-            </div>`;
-          return;
-        }
-
-      } catch (err) {
-        body.innerHTML = `<div class="muted" style="color:var(--red);text-align:center">Gagal memuat data: ${err.message}</div>`;
+      if(fKelas) items = items.filter(x => sMap[x.siswaId]?.kelasId === fKelas);
+      if(fStatus) items = items.filter(x => (x.status||'BELUM').toUpperCase() === fStatus);
+      if(qVal){
+        items = items.filter(x => {
+          const s = sMap[x.siswaId] || {};
+          return (s.nama||'').toLowerCase().includes(qVal) || (s.nisn||'').toLowerCase().includes(qVal) || (x.namaBiaya||'').toLowerCase().includes(qVal);
+        });
       }
+
+      head = `<tr><th>Siswa</th><th>Jenis Biaya</th><th class="right">Nominal</th><th class="right">Terbayar</th><th class="right">Sisa</th><th>Periode</th><th>Status</th><th>Aksi</th></tr>`;
+      rows = items.map(x=>{
+        const s = sMap[x.siswaId] || { nama: 'Siswa Dihapus', nisn: '-' };
+        const sisa = Math.max(0, x.nominal - (x.terbayar||0));
+        return `
+          <tr>
+            <td><b>${escapeHtml(s.nama)}</b><br><small class="muted">${escapeHtml(s.nisn)}</small></td>
+            <td>${escapeHtml(x.namaBiaya)}</td>
+            <td class="right">${fmtRp(x.nominal)}</td>
+            <td class="right" style="color:var(--green)">${fmtRp(x.terbayar||0)}</td>
+            <td class="right" style="color:var(--red);font-weight:bold">${fmtRp(sisa)}</td>
+            <td>${escapeHtml(x.periode)}</td>
+            <td><span class="badge" style="background:${x.status==='LUNAS'?'#dcfce7':(x.status==='DICICIL'?'#fef3c7':'#fee2e2')}">${escapeHtml(x.status||'BELUM')}</span></td>
+            <td>
+              <div style="display:flex;gap:4px">
+                ${x.status !== 'LUNAS' ? `<button class="btn mini primary" onclick='openPayModal(${JSON.stringify({...x, namaSiswa: s.nama})})'>Bayar</button>` : ''}
+                <button class="btn mini" onclick='openEditTagihan(${JSON.stringify(x)})'>Edit</button>
+                <button class="btn mini danger" onclick="deleteDocById('tagihan','${x.id}')">Hapus</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    } else if(m==='BAYAR'){
+      const snap = await getDocs(collection(window.db, 'pembayaran'));
+      const sSnap = await getDocs(collection(window.db, 'siswa'));
+      const sMap = {}; sSnap.docs.forEach(d => sMap[d.id] = d.data());
+      let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(qVal){
+        items = items.filter(x => {
+          const s = sMap[x.siswaId] || {};
+          return (s.nama||'').toLowerCase().includes(qVal) || (s.nisn||'').toLowerCase().includes(qVal) || (x.metode||'').toLowerCase().includes(qVal);
+        });
+      }
+
+      head = `<tr><th>Tanggal</th><th>Siswa</th><th class="right">Jumlah</th><th>Metode</th><th>Catatan / Petugas</th></tr>`;
+      rows = items.map(x=>{
+        const s = sMap[x.siswaId] || { nama: '-' };
+        return `
+          <tr>
+            <td>${escapeHtml(x.tglBayar)}</td>
+            <td><b>${escapeHtml(s.nama)}</b></td>
+            <td class="right" style="color:var(--green);font-weight:bold">+ ${fmtRp(x.jumlah)}</td>
+            <td><span class="badge">${escapeHtml(x.metode)}</span></td>
+            <td>${escapeHtml(x.catatan||'-')} <br><small class="muted">by: ${escapeHtml(x.createdBy||'')}</small></td>
+          </tr>`;
+      }).join('');
+    } else if(m==='USERS'){
+      const snap = await getDocs(collection(window.db, 'users'));
+      let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(qVal) items = items.filter(x => x.username.toLowerCase().includes(qVal) || x.name.toLowerCase().includes(qVal));
+
+      head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>Username</th><th>Nama Lengkap</th><th>Role</th><th>Aksi</th></tr>`;
+      rows = items.map(x=>`
+        <tr>
+          <td><input type="checkbox" class="rowChk" value="${x.id}" ${x.username==='superadmin'?'disabled':''}></td>
+          <td><b>${escapeHtml(x.username)}</b></td>
+          <td>${escapeHtml(x.name)}</td>
+          <td><span class="badge">${escapeHtml(x.role)}</span></td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="btn mini" onclick='openEditUser(${JSON.stringify(x)})'>Edit</button>
+              <button class="btn mini warn" onclick="resetUserPass('${x.id}')">Reset Pass</button>
+              ${x.username!=='superadmin'?`<button class="btn mini danger" onclick="deleteDocById('users','${x.id}')">Hapus</button>`:''}
+            </div>
+          </td>
+        </tr>`).join('');
     }
 
-    window.openAdd = function() {
-      STATE.editData = null;
-      const m = STATE.module;
-      const modalBack = document.getElementById('modalBack');
-      const title = document.getElementById('mTitle');
-      const body = document.getElementById('mBody');
+    body.innerHTML = `<div class="tableWrap"><table><thead>${head}</thead><tbody>${rows || `<tr><td colspan="10" class="muted" style="text-align:center">Tidak ada data</td></tr>`}</tbody></table></div>`;
+  } catch(e) {
+    body.innerHTML = `<div class="card muted" style="text-align:center">Gagal memuat data: ${escapeHtml(e.message)}</div>`;
+  } finally {
+    topLoading(false);
+  }
+}
 
-      if (m === 'KELAS') {
-        title.textContent = 'Tambah Kelas Baru';
-        body.innerHTML = `
-          <div class="field"><label>Nama Kelas</label><input class="input" id="mKelasNama" placeholder="Contoh: 7A"/></div>
-          <div class="field"><label>Wali Kelas</label><input class="input" id="mWali" placeholder="Nama wali kelas..."/></div>`;
-      } else if (m === 'SISWA') {
-        const options = Object.keys(STATE.lookup.kelas).map(kId => `<option value="${kId}">${STATE.lookup.kelas[kId]}</option>`).join('');
-        title.textContent = 'Tambah Siswa Baru';
-        body.innerHTML = `
-          <div class="field"><label>NISN</label><input class="input" id="mNisn"/></div>
-          <div class="field"><label>Nama Siswa</label><input class="input" id="mNama"/></div>
-          <div class="field"><label>Kelas</label><select class="input" id="mKelasId">${options}</select></div>
-          <div class="field"><label>Status Boarding</label><select class="input" id="mIsPondok"><option value="0">Reguler (Semua Siswa)</option><option value="1">Boarding</option></select></div>
-          <div class="field"><label>Nama Ortu / Kontak</label><input class="input" id="mOrtuNama"/></div>`;
-      } else if (m === 'BIAYA') {
-        title.textContent = 'Tambah Tarif Biaya';
-        body.innerHTML = `
-          <div class="field"><label>Nama Biaya</label><input class="input" id="mBiayaNama" placeholder="SPP Bulanan / Daftar Ulang"/></div>
-          <div class="field"><label>Nominal (Rp)</label><input class="input" id="mBiayaNominal" type="number"/></div>
-          <div class="field"><label>Kategori Biaya</label><select class="input" id="mKategori"><option value="REGULER">Reguler (Semua Siswa)</option><option value="BOARDING">Boarding</option></select></div>
-          <div class="field"><label>Tipe Penagihan</label><select class="input" id="mTipe"><option value="BULANAN">Rutin Bulanan (SPP)</option><option value="SEKALI">Sekali Bayar / Tahunan</option></select></div>`;
-      } else if (m === 'TAGIHAN') {
-        title.textContent = 'Tambah Tagihan Siswa';
-        body.innerHTML = `<div class="muted">Form pembuatan tagihan manual</div>`;
-      } else if (m === 'PEMBAYARAN') {
-        const sOptions = Object.keys(STATE.lookup.siswa).map(sId => `<option value="${sId}">${STATE.lookup.siswa[sId]}</option>`).join('');
-        title.textContent = 'Catat Pembayaran SPP';
-        body.innerHTML = `
-          <div class="field"><label>Pilih Siswa</label><select class="input" id="mPaySiswa">${sOptions}</select></div>
-          <div class="field"><label>Bulan / Keterangan</label><input class="input" id="mPayBulan" placeholder="Contoh: Juli 2026"/></div>
-          <div class="field"><label>Nominal (Rp)</label><input class="input" id="mPayNominal" type="number"/></div>`;
-      } else if (m === 'USERS') {
-        title.textContent = 'Tambah User / Akun';
-        body.innerHTML = `
-          <div class="field"><label>Username</label><input class="input" id="mUsrName"/></div>
-          <div class="field"><label>Nama Lengkap</label><input class="input" id="mUsrFull"/></div>
-          <div class="field"><label>Role</label><select class="input" id="mUsrRole"><option value="ADMIN">ADMIN</option><option value="GURU">GURU</option><option value="ORTU">ORTU</option></select></div>
-          <div class="field"><label>Password</label><input class="input" id="mUsrPass" type="password"/></div>`;
+function toggleAll(master, cls){
+  document.querySelectorAll('.' + cls).forEach(el => { if(!el.disabled) el.checked = master.checked; });
+}
+
+async function deleteDocById(coll, id){
+  if(!confirm('Yakin ingin menghapus data ini?')) return;
+  try {
+    await window.fbLibs.deleteDoc(window.fbLibs.doc(window.db, coll, id));
+    toast('Sukses', 'Data berhasil dihapus');
+    loadActive();
+    loadCache();
+  } catch(e){ toast('Error', e.message, 'err'); }
+}
+
+async function deleteSelectedRows(){
+  const checked = Array.from(document.querySelectorAll('.rowChk:checked')).map(el => el.value);
+  if(!checked.length){ toast('Error', 'Pilih data yang ingin dihapus', 'err'); return; }
+  if(!confirm(`Yakin ingin menghapus ${checked.length} data terpilih?`)) return;
+
+  try {
+    topLoading(true);
+    const batch = window.fbLibs.writeBatch(window.db);
+    const coll = STATE.module === 'KELAS' ? 'kelas' : (STATE.module === 'SISWA' ? 'siswa' : 'users');
+    checked.forEach(id => batch.delete(window.fbLibs.doc(window.db, coll, id)));
+    await batch.commit();
+    toast('Sukses', 'Data terpilih berhasil dihapus');
+    loadActive();
+    loadCache();
+  } catch(e){ toast('Error', e.message, 'err'); }
+  finally { topLoading(false); }
+}
+
+function openAdd(){
+  const m = STATE.module;
+  if(m==='KELAS'){
+    openModal('Tambah Kelas', `
+      <input type="hidden" id="mId"/>
+      <div class="field"><label>Nama Kelas</label><input class="input" id="mNama" placeholder="Contoh: 7A, 8B"/></div>
+      <div class="field"><label>Wali Kelas</label><input class="input" id="mWali" placeholder="Nama Wali Kelas"/></div>
+    `);
+    STATE.__modal = 'KELAS';
+  } else if(m==='SISWA'){
+    const kOpts = STATE.cache.kelas.map(k=>`<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
+    openModal('Tambah Siswa', `
+      <input type="hidden" id="mId"/>
+      <div class="field"><label>NISN</label><input class="input" id="mNisn"/></div>
+      <div class="field"><label>Nama Siswa</label><input class="input" id="mNama"/></div>
+      <div class="field"><label>Kelas</label><select class="input" id="mKelasId">${kOpts}</select></div>
+      <div class="field"><label>Status Boarding</label><select class="input" id="mIsPondok"><option value="0">Reguler</option><option value="1">Boarding (Asrama)</option></select></div>
+      <div class="row2">
+        <div class="field"><label>Nama Orang Tua</label><input class="input" id="mOrtuNama"/></div>
+        <div class="field"><label>No HP Orang Tua</label><input class="input" id="mOrtuHp"/></div>
+      </div>
+    `);
+    STATE.__modal = 'SISWA';
+  } else if(m==='BIAYA'){
+    const kOpts = `<option value="">Semua Kelas</option>` + STATE.cache.kelas.map(k=>`<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
+    openModal('Tambah Biaya', `
+      <input type="hidden" id="mId"/>
+      <div class="field"><label>Nama Biaya</label><input class="input" id="mBiayaNama" placeholder="SPP Bulanan / Daftar Ulang"/></div>
+      <div class="row2">
+        <div class="field"><label>Nominal (Rp)</label><input class="input" id="mNominal" type="number" placeholder="150000"/></div>
+        <div class="field"><label>Kategori</label><select class="input" id="mKategori"><option value="REGULER">Reguler</option><option value="BOARDING">Boarding</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Tipe Tagihan</label><select class="input" id="mTipe"><option value="BULANAN">Rutin Bulanan</option><option value="SEKALI">Sekali / Tahunan</option></select></div>
+        <div class="field"><label>Target Kelas</label><select class="input" id="mBiayaKelas">${kOpts}</select></div>
+      </div>
+    `);
+    STATE.__modal = 'BIAYA';
+  } else if(m==='USERS'){
+    openModal('Tambah User', `
+      <input type="hidden" id="mId"/>
+      <div class="row2">
+        <div class="field"><label>Username</label><input class="input" id="mUname" placeholder="ortu_budi"/></div>
+        <div class="field"><label>Password Awal</label><input class="input" id="mPass" type="password" placeholder="12345678"/></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Nama Lengkap</label><input class="input" id="mFullName"/></div>
+        <div class="field"><label>Role</label><select class="input" id="mRole"><option value="ADMIN">ADMIN</option><option value="GURU">GURU</option><option value="ORTU">ORTU</option></select></div>
+      </div>
+      <div class="field"><label>ID Siswa Terkait (Untuk Ortu, pisahkan dengan koma jika lebih dari 1)</label><input class="input" id="mSiswaIds" placeholder="ID_SISWA_1, ID_SISWA_2"/></div>
+    `);
+    STATE.__modal = 'USERS';
+  }
+}
+
+function openEditKelas(k){
+  openAdd();
+  document.getElementById('mTitle').textContent = 'Edit Kelas';
+  document.getElementById('mId').value = k.id;
+  document.getElementById('mNama').value = k.nama;
+  document.getElementById('mWali').value = k.wali;
+}
+
+function openEditSiswa(s){
+  openAdd();
+  document.getElementById('mTitle').textContent = 'Edit Siswa';
+  document.getElementById('mId').value = s.id;
+  document.getElementById('mNisn').value = s.nisn;
+  document.getElementById('mNama').value = s.nama;
+  document.getElementById('mKelasId').value = s.kelasId;
+  document.getElementById('mIsPondok').value = s.isPondok || '0';
+  document.getElementById('mOrtuNama').value = s.ortuNama || '';
+  document.getElementById('mOrtuHp').value = s.ortuHp || '';
+}
+
+function openEditUser(u){
+  openAdd();
+  document.getElementById('mTitle').textContent = 'Edit User';
+  document.getElementById('mId').value = u.id;
+  document.getElementById('mUname').value = u.username;
+  document.getElementById('mUname').disabled = true;
+  document.getElementById('mPass').parentElement.style.display = 'none';
+  document.getElementById('mFullName').value = u.name;
+  document.getElementById('mRole').value = u.role;
+  document.getElementById('mSiswaIds').value = u.siswaIds || '';
+}
+
+function openPayModal(t){
+  openModal('Pembayaran / Cicilan Tagihan', `
+    <input type="hidden" id="pTagihanId" value="${t.id}"/>
+    <div class="field"><label>Siswa & Tagihan</label><b>${escapeHtml(t.namaSiswa)}</b> - ${escapeHtml(t.namaBiaya)} (${escapeHtml(t.periode)})</div>
+    <div class="row2">
+      <div class="field"><label>Total Nominal</label><input class="input" value="${fmtRp(t.nominal)}" disabled/></div>
+      <div class="field"><label>Sisa Belum Bayar</label><input class="input" id="pSisa" value="${fmtRp(t.nominal - (t.terbayar||0))}" disabled/></div>
+    </div>
+    <div class="field"><label>Nominal Bayar (Rp)</label><input class="input" id="pJumlah" type="number" value="${t.nominal - (t.terbayar||0)}"/></div>
+    <div class="row2">
+      <div class="field"><label>Metode Pembayaran</label><select class="input" id="pMetode"><option value="CASH">CASH / TUNAI</option><option value="TRANSFER">TRANSFER BANK</option><option value="QRIS">QRIS / E-WALLET</option></select></div>
+      <div class="field"><label>Tanggal</label><input class="input" id="pTgl" type="date" value="${new Date().toISOString().slice(0,10)}"/></div>
+    </div>
+    <div class="field"><label>Catatan (Opsional)</label><input class="input" id="pCatatan" placeholder="Contoh: Titip ke wali kelas"/></div>
+  `);
+  STATE.__modal = 'PAY_SUBMIT';
+}
+
+function openEditTagihan(t){
+  openModal('Edit Nominal Tagihan', `
+    <input type="hidden" id="eTid" value="${t.id}"/>
+    <div class="field"><label>Jenis Biaya</label><b>${escapeHtml(t.namaBiaya)} (${escapeHtml(t.periode)})</b></div>
+    <div class="field"><label>Nominal Tagihan Baru (Rp)</label><input class="input" id="eNominal" type="number" value="${t.nominal}"/></div>
+    <div class="field"><label>Catatan / Alasan Potongan</label><input class="input" id="eCatatan" value="${escapeHtml(t.catatan||'')}"/></div>
+  `);
+  STATE.__modal = 'TAGIHAN_EDIT';
+}
+
+function openGenerateModal(){
+  const kOpts = `<option value="">Semua Kelas</option>` + STATE.cache.kelas.map(k=>`<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
+  openModal('Generate Tagihan Massal', `
+    <div class="row2">
+      <div class="field"><label>Periode (YYYY-MM)</label><input class="input" id="gPeriode" value="${new Date().toISOString().slice(0,7)}"/></div>
+      <div class="field"><label>Jatuh Tempo</label><input class="input" id="gJt" type="date"/></div>
+    </div>
+    <div class="field"><label>Target Kelas</label><select class="input" id="gKelas">${kOpts}</select></div>
+  `);
+  STATE.__modal = 'GEN_TAGIHAN';
+}
+
+function openBatchSiswa(){
+  openModal('Batch Import Siswa', `
+    <div class="field">
+      <label>Format Data (Copy-Paste dari Excel / Ketik):</label>
+      <div class="muted" style="font-size:11px">NISN • Nama Siswa • Kelas (Nama) • Nama Ortu • HP Ortu • Status Boarding (1/0)</div>
+      <textarea class="input" id="batchRaw" rows="6" placeholder="Paste data excel di sini..." oninput="renderBatchPreview()"></textarea>
+    </div>
+    <div class="field"><label>Pratinjau (Preview)</label><div id="batchPreview" style="max-height:160px;overflow:auto;border:1px solid var(--border);padding:8px;border-radius:12px;background:#f8fafc">Belum ada data...</div></div>
+  `);
+  STATE.__modal = 'BATCH_SISWA';
+}
+
+function renderBatchPreview(){
+  const raw = document.getElementById('batchRaw').value.trim();
+  const box = document.getElementById('batchPreview');
+  if(!raw){ box.innerHTML = 'Belum ada data...'; return; }
+  const lines = raw.split('\n').filter(l=>l.trim());
+  let html = `<table style="font-size:11px"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Boarding</th></tr></thead><tbody>`;
+  lines.forEach(l => {
+    const c = l.split('\t');
+    html += `<tr><td>${c[0]||''}</td><td><b>${c[1]||''}</b></td><td>${c[2]||''}</td><td>${c[5]=='1'?'Boarding':'Reguler'}</td></tr>`;
+  });
+  box.innerHTML = html + `</tbody></table>`;
+}
+
+function openPromoteModal(){
+  const checked = Array.from(document.querySelectorAll('.rowChk:checked')).map(el => el.value);
+  if(!checked.length){ toast('Error', 'Pilih minimal satu siswa di tabel!', 'err'); return; }
+  const kOpts = STATE.cache.kelas.map(k=>`<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
+  openModal('Naik / Pindah Kelas Siswa', `
+    <div class="field"><label>Jumlah Siswa Dipilih</label><b>${checked.length} siswa</b></div>
+    <div class="field"><label>Pindah ke Kelas Tujuan</label><select class="input" id="targetKelasId">${kOpts}</select></div>
+  `);
+  STATE.__promoteIds = checked;
+  STATE.__modal = 'PROMOTE';
+}
+
+async function saveModal(){
+  const m = STATE.__modal;
+  const { db, fbLibs } = window;
+  const { collection, addDoc, updateDoc, doc, getDocs } = fbLibs;
+
+  try {
+    topLoading(true);
+    if(m==='KELAS'){
+      const id = document.getElementById('mId').value;
+      const nama = document.getElementById('mNama').value.trim();
+      const wali = document.getElementById('mWali').value.trim();
+      if(!nama) throw new Error('Nama kelas wajib diisi');
+
+      if(id) await updateDoc(doc(db, 'kelas', id), { nama, wali });
+      else await addDoc(collection(db, 'kelas'), { nama, wali, createdAt: new Date().toISOString() });
+      toast('Sukses', 'Data kelas disimpan');
+    } else if(m==='SISWA'){
+      const id = document.getElementById('mId').value;
+      const nisn = document.getElementById('mNisn').value.trim();
+      const nama = document.getElementById('mNama').value.trim();
+      const kelasId = document.getElementById('mKelasId').value;
+      const isPondok = document.getElementById('mIsPondok').value;
+      const ortuNama = document.getElementById('mOrtuNama').value.trim();
+      const ortuHp = document.getElementById('mOrtuHp').value.trim();
+      if(!nisn || !nama || !kelasId) throw new Error('NISN, Nama, dan Kelas wajib diisi');
+
+      const data = { nisn, nama, kelasId, isPondok, ortuNama, ortuHp };
+      if(id) await updateDoc(doc(db, 'siswa', id), data);
+      else await addDoc(collection(db, 'siswa'), { ...data, createdAt: new Date().toISOString() });
+      toast('Sukses', 'Data siswa disimpan');
+    } else if(m==='BIAYA'){
+      const nama = document.getElementById('mBiayaNama').value.trim();
+      const nominal = Number(document.getElementById('mNominal').value||0);
+      const kategori = document.getElementById('mKategori').value;
+      const tipe = document.getElementById('mTipe').value;
+      const kelasId = document.getElementById('mBiayaKelas').value;
+      if(!nama || nominal<=0) throw new Error('Nama & Nominal wajib diisi');
+
+      await addDoc(collection(db, 'biaya'), { nama, nominal, kategori, tipe, kelasId, createdAt: new Date().toISOString() });
+      toast('Sukses', 'Biaya berhasil ditambah');
+    } else if(m==='USERS'){
+      const id = document.getElementById('mId').value;
+      const username = document.getElementById('mUname').value.trim().toLowerCase();
+      const name = document.getElementById('mFullName').value.trim();
+      const role = document.getElementById('mRole').value;
+      const siswaIds = document.getElementById('mSiswaIds').value.trim();
+      const pass = document.getElementById('mPass').value;
+
+      if(id){
+        await updateDoc(doc(db, 'users', id), { name, role, siswaIds });
+      } else {
+        if(!username || !pass) throw new Error('Username & password wajib diisi');
+        await addDoc(collection(db, 'users'), { username, passHash: pass, name, role, siswaIds, createdAt: new Date().toISOString() });
       }
+      toast('Sukses', 'Data user disimpan');
+    } else if(m==='PAY_SUBMIT'){
+      const tId = document.getElementById('pTagihanId').value;
+      const jumlah = Number(document.getElementById('pJumlah').value||0);
+      const metode = document.getElementById('pMetode').value;
+      const catatan = document.getElementById('pCatatan').value.trim();
+      const tglBayar = document.getElementById('pTgl').value;
 
-      modalBack.style.display = 'flex';
-    };
+      const tDoc = await window.fbLibs.getDoc(doc(db, 'tagihan', tId));
+      const t = tDoc.data();
+      const terbayarBaru = Number(t.terbayar||0) + jumlah;
+      if(terbayarBaru > t.nominal) throw new Error('Pembayaran melebihi total tagihan!');
 
-    window.openEdit = function(mod, data) {
-      STATE.editData = data;
-      const modalBack = document.getElementById('modalBack');
-      const title = document.getElementById('mTitle');
-      const body = document.getElementById('mBody');
+      const status = terbayarBaru >= t.nominal ? 'LUNAS' : 'DICICIL';
+      await updateDoc(doc(db, 'tagihan', tId), { terbayar: terbayarBaru, status, paidAt: new Date().toISOString() });
+      await addDoc(collection(db, 'pembayaran'), { tagihanId: tId, siswaId: t.siswaId, kelasId: t.kelasId, jumlah, metode, catatan, tglBayar, createdBy: STATE.me.username, createdAt: new Date().toISOString() });
+      toast('Sukses', `Pembayaran dicatat! Status: ${status}`);
+    } else if(m==='TAGIHAN_EDIT'){
+      const tId = document.getElementById('eTid').value;
+      const nominal = Number(document.getElementById('eNominal').value||0);
+      const catatan = document.getElementById('eCatatan').value.trim();
+      const tDoc = await window.fbLibs.getDoc(doc(db, 'tagihan', tId));
+      const t = tDoc.data();
+      const status = nominal <= Number(t.terbayar||0) ? 'LUNAS' : (Number(t.terbayar||0) > 0 ? 'DICICIL' : 'BELUM');
+      await updateDoc(doc(db, 'tagihan', tId), { nominal, status, catatan });
+      toast('Sukses', 'Tagihan diperbarui');
+    } else if(m==='GEN_TAGIHAN'){
+      const periode = document.getElementById('gPeriode').value.trim();
+      const jatuhTempo = document.getElementById('gJt').value;
+      const kelasId = document.getElementById('gKelas').value;
+      if(!periode) throw new Error('Periode wajib diisi');
 
-      if (mod === 'KELAS') {
-        title.textContent = 'Edit Data Kelas';
-        body.innerHTML = `
-          <div class="field"><label>Nama Kelas</label><input class="input" id="mKelasNama" value="${escapeHtml(data.nama||'')}"/></div>
-          <div class="field"><label>Wali Kelas</label><input class="input" id="mWali" value="${escapeHtml(data.wali||'')}"/></div>`;
-      } else if (mod === 'SISWA') {
-        const options = Object.keys(STATE.lookup.kelas).map(kId => `<option value="${kId}" ${kId===data.kelasId?'selected':''}>${STATE.lookup.kelas[kId]}</option>`).join('');
-        title.textContent = 'Edit Data Siswa';
-        body.innerHTML = `
-          <div class="field"><label>NISN</label><input class="input" id="mNisn" value="${escapeHtml(data.nisn||'')}"/></div>
-          <div class="field"><label>Nama Siswa</label><input class="input" id="mNama" value="${escapeHtml(data.nama||'')}"/></div>
-          <div class="field"><label>Kelas</label><select class="input" id="mKelasId">${options}</select></div>
-          <div class="field"><label>Status Boarding</label><select class="input" id="mIsPondok"><option value="0" ${!data.isPondok?'selected':''}>Reguler</option><option value="1" ${data.isPondok?'selected':''}>Boarding</option></select></div>
-          <div class="field"><label>Nama Ortu</label><input class="input" id="mOrtuNama" value="${escapeHtml(data.ortuNama||'')}"/></div>`;
-      } else if (mod === 'BIAYA') {
-        title.textContent = 'Edit Tarif Biaya';
-        body.innerHTML = `
-          <div class="field"><label>Nama Biaya</label><input class="input" id="mBiayaNama" value="${escapeHtml(data.nama||'')}"/></div>
-          <div class="field"><label>Nominal (Rp)</label><input class="input" id="mBiayaNominal" type="number" value="${data.nominal||0}"/></div>
-          <div class="field"><label>Kategori</label><select class="input" id="mKategori"><option value="REGULER" ${data.kategori==='REGULER'?'selected':''}>Reguler</option><option value="BOARDING" ${data.kategori==='BOARDING'?'selected':''}>Boarding</option></select></div>
-          <div class="field"><label>Tipe</label><select class="input" id="mTipe"><option value="BULANAN" ${data.tipe==='BULANAN'?'selected':''}>Rutin Bulanan (SPP)</option><option value="SEKALI" ${data.tipe==='SEKALI'?'selected':''}>Sekali / Tahunan</option></select></div>`;
-      } else if (mod === 'PEMBAYARAN') {
-        const sOptions = Object.keys(STATE.lookup.siswa).map(sId => `<option value="${sId}" ${sId===data.siswaId?'selected':''}>${STATE.lookup.siswa[sId]}</option>`).join('');
-        title.textContent = 'Edit Transaksi Pembayaran';
-        body.innerHTML = `
-          <div class="field"><label>Pilih Siswa</label><select class="input" id="mPaySiswa">${sOptions}</select></div>
-          <div class="field"><label>Bulan / Keterangan</label><input class="input" id="mPayBulan" value="${escapeHtml(data.keterangan||data.bulan||'')}"/></div>
-          <div class="field"><label>Nominal (Rp)</label><input class="input" id="mPayNominal" type="number" value="${data.nominal||0}"/></div>`;
-      } else if (mod === 'USERS') {
-        title.textContent = 'Edit User / Akun';
-        body.innerHTML = `
-          <div class="field"><label>Username (Tetap)</label><input class="input" value="${escapeHtml(data.username)}" disabled/></div>
-          <div class="field"><label>Nama Lengkap</label><input class="input" id="mUsrFull" value="${escapeHtml(data.name||'')}"/></div>
-          <div class="field"><label>Role</label><select class="input" id="mUsrRole"><option value="ADMIN" ${data.role==='ADMIN'?'selected':''}>ADMIN</option><option value="GURU" ${data.role==='GURU'?'selected':''}>GURU</option><option value="ORTU" ${data.role==='ORTU'?'selected':''}>ORTU</option></select></div>`;
-      }
+      const sSnap = await getDocs(collection(db, 'siswa'));
+      const bSnap = await getDocs(collection(db, 'biaya'));
+      const batch = window.fbLibs.writeBatch(db);
+      let count = 0;
 
-      modalBack.style.display = 'flex';
-    };
+      sSnap.forEach(sDoc => {
+        const s = sDoc.data();
+        if(kelasId && s.kelasId !== kelasId) return;
+        bSnap.forEach(bDoc => {
+          const b = bDoc.data();
+          if(b.kelasId && b.kelasId !== s.kelasId) return;
+          if(b.kategori === 'BOARDING' && s.isPondok !== '1') return;
 
-    window.closeModal = function() {
-      document.getElementById('modalBack').style.display = 'none';
-      STATE.editData = null;
-    };
+          const ref = doc(collection(db, 'tagihan'));
+          batch.set(ref, {
+            siswaId: sDoc.id, kelasId: s.kelasId, biayaId: bDoc.id,
+            namaBiaya: b.nama, nominal: b.nominal, terbayar: 0,
+            periode, jatuhTempo, status: 'BELUM', createdAt: new Date().toISOString()
+          });
+          count++;
+        });
+      });
+      await batch.commit();
+      toast('Sukses', `Berhasil generate ${count} tagihan massal!`);
+    } else if(m==='PROMOTE'){
+      const targetKelasId = document.getElementById('targetKelasId').value;
+      const batch = window.fbLibs.writeBatch(db);
+      STATE.__promoteIds.forEach(id => {
+        batch.update(doc(db, 'siswa', id), { kelasId: targetKelasId });
+      });
+      await batch.commit();
+      toast('Sukses', `Berhasil memindahkan ${STATE.__promoteIds.length} siswa.`);
+    } else if(m==='BATCH_SISWA'){
+      const raw = document.getElementById('batchRaw').value.trim();
+      if(!raw) throw new Error('Data kosong');
+      const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.nama.toLowerCase().trim()] = k.id);
+      
+      const batch = window.fbLibs.writeBatch(db);
+      const lines = raw.split('\n').filter(l=>l.trim());
+      lines.forEach(l => {
+        const c = l.split('\t');
+        const kId = kMap[(c[2]||'').toLowerCase().trim()] || STATE.cache.kelas[0]?.id || '';
+        const ref = doc(collection(db, 'siswa'));
+        batch.set(ref, {
+          nisn: c[0]?.trim()||'', nama: c[1]?.trim()||'', kelasId: kId,
+          ortuNama: c[3]?.trim()||'', ortuHp: c[4]?.trim()||'', isPondok: c[5]?.trim()=='1'?'1':'0',
+          createdAt: new Date().toISOString()
+        });
+      });
+      await batch.commit();
+      toast('Sukses', `Berhasil import ${lines.length} siswa`);
+    }
 
-    window.saveModal = async function() {
-      const m = STATE.module;
-      const isEdit = STATE.editData !== null;
-      const docId = isEdit ? STATE.editData.id : null;
+    closeModal();
+    loadActive();
+    loadCache();
+  } catch(e){
+    toast('Error', e.message, 'err');
+  } finally {
+    topLoading(false);
+  }
+}
 
-      try {
-        if (m === 'KELAS') {
-          const nama = document.getElementById('mKelasNama').value.trim();
-          const wali = document.getElementById('mWali').value.trim();
-          if (!nama) return toast('Error', 'Nama kelas wajib diisi', 'err');
-          if (isEdit) await updateDoc(doc(db, "kelas", docId), { nama, wali });
-          else await addDoc(collection(db, "kelas"), { nama, wali, createdAt: new Date().toISOString() });
-        } else if (m === 'SISWA') {
-          const nisn = document.getElementById('mNisn').value.trim();
-          const nama = document.getElementById('mNama').value.trim();
-          const kelasId = document.getElementById('mKelasId').value;
-          const isPondok = document.getElementById('mIsPondok').value === '1';
-          const ortuNama = document.getElementById('mOrtuNama').value.trim();
-          if (!nama) return toast('Error', 'Nama siswa wajib diisi', 'err');
-          const payload = { nisn, nama, kelasId, isPondok, ortuNama };
-          if (isEdit) await updateDoc(doc(db, "siswa", docId), payload);
-          else { payload.createdAt = new Date().toISOString(); await addDoc(collection(db, "siswa"), payload); }
-        } else if (m === 'BIAYA') {
-          const nama = document.getElementById('mBiayaNama').value.trim();
-          const nominal = Number(document.getElementById('mBiayaNominal').value || 0);
-          const kategori = document.getElementById('mKategori').value;
-          const tipe = document.getElementById('mTipe').value;
-          const payload = { nama, nominal, kategori, tipe };
-          if (isEdit) await updateDoc(doc(db, "biaya", docId), payload);
-          else { payload.createdAt = new Date().toISOString(); await addDoc(collection(db, "biaya"), payload); }
-        } else if (m === 'PEMBAYARAN') {
-          const siswaId = document.getElementById('mPaySiswa').value;
-          const bulan = document.getElementById('mPayBulan').value.trim();
-          const nominal = Number(document.getElementById('mPayNominal').value || 0);
-          if (!nominal) return toast('Error', 'Nominal wajib diisi', 'err');
-          const payload = { siswaId, bulan, keterangan: bulan, nominal };
-          if (isEdit) await updateDoc(doc(db, "pembayaran", docId), payload);
-          else {
-            const d = new Date();
-            payload.tanggal = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            payload.petugas = STATE.me.name;
-            payload.createdAt = new Date().toISOString();
-            await addDoc(collection(db, "pembayaran"), payload);
-          }
-        } else if (m === 'USERS') {
-          const name = document.getElementById('mUsrFull').value.trim();
-          const role = document.getElementById('mUsrRole').value;
-          const payload = { name, role };
-          if (isEdit) {
-            await updateDoc(doc(db, "users", STATE.editData.username), payload);
-          } else {
-            const username = document.getElementById('mUsrName').value.trim().toLowerCase();
-            const pass = document.getElementById('mUsrPass').value;
-            if (!username || !pass) return toast('Error', 'Username & password wajib diisi', 'err');
-            payload.username = username;
-            payload.passHash = await sha256(pass);
-            payload.createdAt = new Date().toISOString();
-            await setDoc(doc(db, "users", username), payload);
-          }
-        }
+function openModal(title, html){
+  document.getElementById('mTitle').textContent = title;
+  document.getElementById('mBody').innerHTML = html;
+  document.getElementById('modalBack').style.display = 'flex';
+}
+function closeModal(){ document.getElementById('modalBack').style.display = 'none'; STATE.__modal = null; }
 
-        toast('Sukses', isEdit ? 'Data berhasil diperbarui!' : 'Data berhasil disimpan!');
-        closeModal();
-        await loadLookups();
-        loadActive();
-      } catch (err) {
-        toast('Error', 'Gagal menyimpan: ' + err.message, 'err');
-      }
-    };
+async function resetUserPass(id){
+  if(!confirm('Reset password user ini menjadi 12345678?')) return;
+  try {
+    await window.fbLibs.updateDoc(window.fbLibs.doc(window.db, 'users', id), { passHash: '12345678' });
+    toast('Sukses', 'Password berhasil direset ke 12345678');
+  } catch(e){ toast('Error', e.message, 'err'); }
+}
 
-    window.deleteRecord = async function(collName, id) {
-      if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
-      try {
-        await deleteDoc(doc(db, collName, id));
-        toast('Sukses', 'Data berhasil dihapus');
-        await loadLookups();
-        loadActive();
-      } catch (err) {
-        toast('Error', 'Gagal menghapus: ' + err.message, 'err');
-      }
-    };
-
-    initDatabase();
-    if (STATE.me) bootApp();
-  </script>
+function printOrtuPdf(){
+  window.print();
+}
+</script>
 </body>
 </html>

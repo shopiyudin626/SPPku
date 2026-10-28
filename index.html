@@ -9,7 +9,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Ganti dengan Konfigurasi Firebase Proyek Anda (Pastikan milik proyek Zero Anda)
+    // Pastikan Menggunakan Konfigurasi Firebase Proyek 'Zero' Anda
     // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBu3FsEvZnlBNUzYVUFW7rnUbak9Or6fHU",
@@ -20,6 +20,7 @@ const firebaseConfig = {
   appId: "1:697361025400:web:4f1ffc301e25586c81e08d",
   measurementId: "G-51ZNSWN3XR"
 };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     window.db = db;
@@ -94,7 +95,7 @@ const firebaseConfig = {
     @keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
 
     .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9998;padding:12px;backdrop-filter:blur(3px)}
-    .modal{width:min(580px,100%);border:1px solid var(--border);border-radius:20px;background:#ffffff;box-shadow:var(--shadow);overflow:hidden}
+    .modal{width:min(620px,100%);border:1px solid var(--border);border-radius:20px;background:#ffffff;box-shadow:var(--shadow);overflow:hidden}
     .modalHead{padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
     .modalHead h3{margin:0;font-size:15px}
     .modalBody{padding:16px;display:grid;gap:12px;max-height:75vh;overflow-y:auto}
@@ -112,6 +113,16 @@ const firebaseConfig = {
     .suggest-list{position:absolute;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:#ffffff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);z-index:99;display:none;margin-top:4px}
     .suggest-item{padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border)}
     .suggest-item:hover{background:#f8fafc;color:var(--primary)}
+
+    .link-nama{color:var(--primary);cursor:pointer;font-weight:bold;text-decoration:underline}
+    .link-nama:hover{color:#0369a1}
+
+    @media print {
+      body * { visibility: hidden; }
+      #modalBack, #modalBack * { visibility: visible; }
+      #modalBack { position: absolute; left: 0; top: 0; width: 100%; background: none; }
+      .modalFoot, .modalHead button { display: none !important; }
+    }
 
     @media(max-width:768px){
       .wrap{padding:8px}
@@ -324,11 +335,16 @@ function renderTabs(){
 
 async function loadCache(){
   const { collection, getDocs } = window.fbLibs;
+  
+  // Cache Kelas & Sort
   const kSnap = await getDocs(collection(window.db, 'kelas'));
-  STATE.cache.kelas = kSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  STATE.cache.kelas = kSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a,b) => a.nama.localeCompare(b.nama, undefined, {numeric: true, sensitivity: 'base'}));
 
+  // Cache Siswa & Sort
   const sSnap = await getDocs(collection(window.db, 'siswa'));
-  STATE.cache.siswa = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  STATE.cache.siswa = sSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a,b) => a.nama.localeCompare(b.nama));
   
   const kOpts = `<option value="">Semua Kelas</option>` + STATE.cache.kelas.map(k => `<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
   document.getElementById('fKelas').innerHTML = kOpts;
@@ -434,6 +450,10 @@ async function loadActive(){
     if(m==='KELAS'){
       const snap = await getDocs(collection(window.db, 'kelas'));
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      
+      // Mengurutkan Kelas secara Alfabetis & Angka yang Benar
+      items.sort((a,b) => a.nama.localeCompare(b.nama, undefined, {numeric: true, sensitivity: 'base'}));
+
       if(qVal) items = items.filter(x => x.nama.toLowerCase().includes(qVal) || x.wali.toLowerCase().includes(qVal));
 
       head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>Nama Kelas</th><th>Wali Kelas</th><th>Aksi</th></tr>`;
@@ -449,6 +469,9 @@ async function loadActive(){
       const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
       
+      // Urutkan siswa berdasarkan Nama
+      items.sort((a,b) => a.nama.localeCompare(b.nama));
+
       if(fKelas) items = items.filter(x => x.kelasId === fKelas);
       if(qVal) items = items.filter(x => (x.nisn||'').toLowerCase().includes(qVal) || (x.nama||'').toLowerCase().includes(qVal) || (x.ortuNama||'').toLowerCase().includes(qVal));
 
@@ -457,16 +480,23 @@ async function loadActive(){
         <tr>
           <td><input type="checkbox" class="rowChk" value="${x.id}"></td>
           <td>${escapeHtml(x.nisn)}</td>
-          <td><b>${escapeHtml(x.nama)}</b></td>
+          <td><span class="link-nama" onclick='viewSiswaStatement(${JSON.stringify(x)})'>${escapeHtml(x.nama)}</span></td>
           <td>${escapeHtml(kMap[x.kelasId] || '-')}</td>
           <td><span class="badge" style="background:${x.isPondok=='1'?'#dbeafe':'#f1f5f9'};color:${x.isPondok=='1'?'#1d4ed8':'#475569'}">${x.isPondok=='1'?'Boarding':'Reguler'}</span></td>
           <td>${escapeHtml(x.ortuNama)} (${escapeHtml(x.ortuHp)})</td>
-          <td><button class="btn mini" onclick='openEditSiswa(${JSON.stringify(x)})'>Edit</button></td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="btn mini primary" onclick='viewSiswaStatement(${JSON.stringify(x)})'>Rincian / e-Statement</button>
+              <button class="btn mini" onclick='openEditSiswa(${JSON.stringify(x)})'>Edit</button>
+            </div>
+          </td>
         </tr>`).join('');
     } else if(m==='BIAYA'){
       const snap = await getDocs(collection(window.db, 'biaya'));
       const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      items.sort((a,b) => a.nama.localeCompare(b.nama));
+
       if(qVal) items = items.filter(x => x.nama.toLowerCase().includes(qVal));
 
       head = `<tr><th>Nama Biaya</th><th class="right">Nominal</th><th>Kategori</th><th>Tipe Tagihan</th><th>Target Kelas</th><th>Aksi</th></tr>`;
@@ -521,6 +551,10 @@ async function loadActive(){
       const sSnap = await getDocs(collection(window.db, 'siswa'));
       const sMap = {}; sSnap.docs.forEach(d => sMap[d.id] = d.data());
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      
+      // Urutkan transaksi terbaru di atas
+      items.sort((a,b) => (b.tglBayar||'').localeCompare(a.tglBayar||''));
+
       if(qVal){
         items = items.filter(x => {
           const s = sMap[x.siswaId] || {};
@@ -543,6 +577,8 @@ async function loadActive(){
     } else if(m==='USERS'){
       const snap = await getDocs(collection(window.db, 'users'));
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      items.sort((a,b) => a.username.localeCompare(b.username));
+
       if(qVal) items = items.filter(x => x.username.toLowerCase().includes(qVal) || x.name.toLowerCase().includes(qVal));
 
       head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>Username</th><th>Nama Lengkap</th><th>Role</th><th>Anak Terkait</th><th>Aksi</th></tr>`;
@@ -611,8 +647,96 @@ async function deleteSelectedRows(){
   finally { topLoading(false); }
 }
 
+// FUNGSI UNTUK MERINCI TAGIHAN & E-STATEMENT SISWA
+async function viewSiswaStatement(siswa){
+  try {
+    topLoading(true);
+    const { collection, getDocs, query, where } = window.fbLibs;
+    const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
+
+    // Ambil tagihan siswa ini
+    const tQ = query(collection(window.db, 'tagihan'), where('siswaId', '==', siswa.id));
+    const tSnap = await getDocs(tQ);
+    const tagihanList = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Ambil riwayat pembayaran siswa ini
+    const pQ = query(collection(window.db, 'pembayaran'), where('siswaId', '==', siswa.id));
+    const pSnap = await getDocs(pQ);
+    const bayarList = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const totalTunggakan = tagihanList.reduce((acc, t) => acc + Math.max(0, t.nominal - (t.terbayar||0)), 0);
+
+    const htmlContent = `
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <h2 style="margin:0;font-size:16px">${escapeHtml(siswa.nama)}</h2>
+        <div class="muted" style="font-size:12px">NISN: ${escapeHtml(siswa.nisn||'-')} | Kelas: ${escapeHtml(kMap[siswa.kelasId]||'-')} | Status: ${siswa.isPondok=='1'?'Boarding':'Reguler'}</div>
+        <div class="muted" style="font-size:12px">Orang Tua: ${escapeHtml(siswa.ortuNama||'-')} (${escapeHtml(siswa.ortuHp||'-')})</div>
+      </div>
+
+      <div class="card" style="background:#fef2f2;border-color:#fecaca;margin-bottom:12px">
+        <div class="muted" style="color:#991b1b">Total Tunggakan Keuangan</div>
+        <div style="font-size:20px;font-weight:bold;color:#dc2626">${fmtRp(totalTunggakan)}</div>
+      </div>
+
+      <h4 style="margin:8px 0">1. Rincian Tagihan & Tunggakan</h4>
+      <div class="tableWrap" style="margin-bottom:12px">
+        <table>
+          <thead><tr><th>Biaya</th><th>Periode</th><th class="right">Nominal</th><th class="right">Terbayar</th><th class="right">Sisa</th><th>Status</th></tr></thead>
+          <tbody>
+            ${tagihanList.length ? tagihanList.map(t => `
+              <tr>
+                <td><b>${escapeHtml(t.namaBiaya)}</b></td>
+                <td>${escapeHtml(t.periode)}</td>
+                <td class="right">${fmtRp(t.nominal)}</td>
+                <td class="right" style="color:var(--green)">${fmtRp(t.terbayar||0)}</td>
+                <td class="right" style="color:var(--red);font-weight:bold">${fmtRp(t.nominal - (t.terbayar||0))}</td>
+                <td><span class="badge">${escapeHtml(t.status||'BELUM')}</span></td>
+              </tr>
+            `).join('') : '<tr><td colspan="6" class="muted" style="text-align:center">Belum ada tagihan</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style="margin:8px 0">2. Riwayat Pembayaran Masuk</h4>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Metode</th><th class="right">Jumlah</th><th>Catatan</th></tr></thead>
+          <tbody>
+            ${bayarList.length ? bayarList.map(b => `
+              <tr>
+                <td>${escapeHtml(b.tglBayar)}</td>
+                <td><span class="badge">${escapeHtml(b.metode)}</span></td>
+                <td class="right" style="color:var(--green);font-weight:bold">+ ${fmtRp(b.jumlah)}</td>
+                <td>${escapeHtml(b.catatan||'-')}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="4" class="muted" style="text-align:center">Belum ada transaksi pembayaran</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    openModal('e-Statement & Rincian Keuangan Siswa', htmlContent);
+    
+    // Sesuaikan tombol footer modal agar ada tombol Cetak e-Statement
+    document.getElementById('mFoot').innerHTML = `
+      <button class="btn primary" onclick="printOrtuPdf()">Cetak e-Statement (PDF)</button>
+      <button class="btn" onclick="closeModal()">Tutup</button>
+    `;
+    STATE.__modal = 'VIEW_STATEMENT';
+  } catch(e) {
+    toast('Error', e.message, 'err');
+  } finally {
+    topLoading(false);
+  }
+}
+
 function openAdd(){
   const m = STATE.module;
+  document.getElementById('mFoot').innerHTML = `
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn primary" id="mSave" onclick="saveModal()">Simpan</button>
+  `;
+
   if(m==='KELAS'){
     openModal('Tambah Kelas', `
       <input type="hidden" id="mId"/>
@@ -1019,7 +1143,6 @@ function printOrtuPdf(){
   window.print();
 }
 
-// Tutup dropdown pencarian anak jika klik di luar
 window.addEventListener('click', function(e){
   if(!e.target.closest('.suggest-box')){
     const list = document.getElementById('suggestListAnak');

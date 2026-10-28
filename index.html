@@ -9,7 +9,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Pastikan Menggunakan Konfigurasi Firebase Proyek 'Zero' Anda
+    // Ganti dengan Konfigurasi Firebase Proyek 'Zero' Anda
     // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBu3FsEvZnlBNUzYVUFW7rnUbak9Or6fHU",
@@ -108,7 +108,6 @@ const firebaseConfig = {
     .loadingLine > div{height:100%;width:35%;background:var(--primary);animation:load 1.0s ease-in-out infinite}
     @keyframes load{0%{transform:translateX(-120%)}100%{transform:translateX(320%)} }
 
-    /* Auto-suggest dropdown styling */
     .suggest-box{position:relative}
     .suggest-list{position:absolute;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:#ffffff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);z-index:99;display:none;margin-top:4px}
     .suggest-item{padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border)}
@@ -194,7 +193,7 @@ const firebaseConfig = {
               <button class="btn primary" id="btnBatch" style="display:none" onclick="openBatchSiswa()">Batch Import</button>
               <button class="btn primary" id="btnPromote" style="display:none" onclick="openPromoteModal()">Naik/Pindah Kelas</button>
               <button class="btn danger" id="btnDeleteSelected" style="display:none" onclick="deleteSelectedRows()">Hapus Terpilih</button>
-              <button class="btn primary" id="btnAction" style="display:none" onclick="openGenerateModal()">Generate Tagihan</button>
+              <button class="btn primary" id="btnAction" style="display:none" onclick="openGenerateModal()">Generate Massal</button>
             </div>
           </div>
           <div class="body" id="body"></div>
@@ -336,14 +335,16 @@ function renderTabs(){
 async function loadCache(){
   const { collection, getDocs } = window.fbLibs;
   
-  // Cache Kelas & Sort
   const kSnap = await getDocs(collection(window.db, 'kelas'));
   STATE.cache.kelas = kSnap.docs.map(d => ({ id: d.id, ...d.data() }))
     .sort((a,b) => a.nama.localeCompare(b.nama, undefined, {numeric: true, sensitivity: 'base'}));
 
-  // Cache Siswa & Sort
   const sSnap = await getDocs(collection(window.db, 'siswa'));
   STATE.cache.siswa = sSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a,b) => a.nama.localeCompare(b.nama));
+
+  const bSnap = await getDocs(collection(window.db, 'biaya'));
+  STATE.cache.biaya = bSnap.docs.map(d => ({ id: d.id, ...d.data() }))
     .sort((a,b) => a.nama.localeCompare(b.nama));
   
   const kOpts = `<option value="">Semua Kelas</option>` + STATE.cache.kelas.map(k => `<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
@@ -358,6 +359,7 @@ function switchModule(key){
   document.getElementById('fKelas').style.display = ['DASH','ORTU','USERS','BAYAR'].includes(key)?'none':'block';
   document.getElementById('q').style.display = ['DASH','ORTU'].includes(key)?'none':'block';
   document.getElementById('btnAdd').style.display = ['DASH','ORTU','BAYAR'].includes(key)?'none':'inline-flex';
+  if(key==='TAGIHAN') document.getElementById('btnAdd').textContent = 'Tambah Tagihan';
   document.getElementById('btnBatch').style.display = key==='SISWA'?'inline-flex':'none';
   document.getElementById('btnPromote').style.display = key==='SISWA'?'inline-flex':'none';
   document.getElementById('btnDeleteSelected').style.display = ['KELAS','SISWA','USERS'].includes(key)?'inline-flex':'none';
@@ -450,10 +452,7 @@ async function loadActive(){
     if(m==='KELAS'){
       const snap = await getDocs(collection(window.db, 'kelas'));
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      
-      // Mengurutkan Kelas secara Alfabetis & Angka yang Benar
       items.sort((a,b) => a.nama.localeCompare(b.nama, undefined, {numeric: true, sensitivity: 'base'}));
-
       if(qVal) items = items.filter(x => x.nama.toLowerCase().includes(qVal) || x.wali.toLowerCase().includes(qVal));
 
       head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>Nama Kelas</th><th>Wali Kelas</th><th>Aksi</th></tr>`;
@@ -468,10 +467,7 @@ async function loadActive(){
       const snap = await getDocs(collection(window.db, 'siswa'));
       const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      
-      // Urutkan siswa berdasarkan Nama
       items.sort((a,b) => a.nama.localeCompare(b.nama));
-
       if(fKelas) items = items.filter(x => x.kelasId === fKelas);
       if(qVal) items = items.filter(x => (x.nisn||'').toLowerCase().includes(qVal) || (x.nama||'').toLowerCase().includes(qVal) || (x.ortuNama||'').toLowerCase().includes(qVal));
 
@@ -486,7 +482,7 @@ async function loadActive(){
           <td>${escapeHtml(x.ortuNama)} (${escapeHtml(x.ortuHp)})</td>
           <td>
             <div style="display:flex;gap:4px">
-              <button class="btn mini primary" onclick='viewSiswaStatement(${JSON.stringify(x)})'>Rincian / e-Statement</button>
+              <button class="btn mini primary" onclick='viewSiswaStatement(${JSON.stringify(x)})'>Rincian</button>
               <button class="btn mini" onclick='openEditSiswa(${JSON.stringify(x)})'>Edit</button>
             </div>
           </td>
@@ -496,7 +492,6 @@ async function loadActive(){
       const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
       items.sort((a,b) => a.nama.localeCompare(b.nama));
-
       if(qVal) items = items.filter(x => x.nama.toLowerCase().includes(qVal));
 
       head = `<tr><th>Nama Biaya</th><th class="right">Nominal</th><th>Kategori</th><th>Tipe Tagihan</th><th>Target Kelas</th><th>Aksi</th></tr>`;
@@ -551,10 +546,7 @@ async function loadActive(){
       const sSnap = await getDocs(collection(window.db, 'siswa'));
       const sMap = {}; sSnap.docs.forEach(d => sMap[d.id] = d.data());
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      
-      // Urutkan transaksi terbaru di atas
       items.sort((a,b) => (b.tglBayar||'').localeCompare(a.tglBayar||''));
-
       if(qVal){
         items = items.filter(x => {
           const s = sMap[x.siswaId] || {};
@@ -578,7 +570,6 @@ async function loadActive(){
       const snap = await getDocs(collection(window.db, 'users'));
       let items = snap.docs.map(d=>({id:d.id, ...d.data()}));
       items.sort((a,b) => a.username.localeCompare(b.username));
-
       if(qVal) items = items.filter(x => x.username.toLowerCase().includes(qVal) || x.name.toLowerCase().includes(qVal));
 
       head = `<tr><th width="30"><input type="checkbox" onclick="toggleAll(this, 'rowChk')"></th><th>Username</th><th>Nama Lengkap</th><th>Role</th><th>Anak Terkait</th><th>Aksi</th></tr>`;
@@ -647,19 +638,16 @@ async function deleteSelectedRows(){
   finally { topLoading(false); }
 }
 
-// FUNGSI UNTUK MERINCI TAGIHAN & E-STATEMENT SISWA
 async function viewSiswaStatement(siswa){
   try {
     topLoading(true);
     const { collection, getDocs, query, where } = window.fbLibs;
     const kMap = {}; STATE.cache.kelas.forEach(k => kMap[k.id] = k.nama);
 
-    // Ambil tagihan siswa ini
     const tQ = query(collection(window.db, 'tagihan'), where('siswaId', '==', siswa.id));
     const tSnap = await getDocs(tQ);
     const tagihanList = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Ambil riwayat pembayaran siswa ini
     const pQ = query(collection(window.db, 'pembayaran'), where('siswaId', '==', siswa.id));
     const pSnap = await getDocs(pQ);
     const bayarList = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -716,8 +704,6 @@ async function viewSiswaStatement(siswa){
     `;
 
     openModal('e-Statement & Rincian Keuangan Siswa', htmlContent);
-    
-    // Sesuaikan tombol footer modal agar ada tombol Cetak e-Statement
     document.getElementById('mFoot').innerHTML = `
       <button class="btn primary" onclick="printOrtuPdf()">Cetak e-Statement (PDF)</button>
       <button class="btn" onclick="closeModal()">Tutup</button>
@@ -773,6 +759,24 @@ function openAdd(){
       </div>
     `);
     STATE.__modal = 'BIAYA';
+  } else if(m==='TAGIHAN'){
+    // FORM TAMBAH TAGIHAN PERORANGAN
+    const sOpts = STATE.cache.siswa.map(s=>`<option value="${s.id}">${escapeHtml(s.nama)} (${s.nisn||'-'})</option>`).join('');
+    const bOpts = STATE.cache.biaya.map(b=>`<option value="${b.id}" data-nom="${b.nominal}">${escapeHtml(b.nama)} - ${fmtRp(b.nominal)}</option>`).join('');
+    openModal('Tambah Tagihan Perorangan', `
+      <div class="field"><label>Pilih Siswa</label><select class="input" id="tSiswaId">${sOpts}</select></div>
+      <div class="field"><label>Pilih Jenis Biaya</label><select class="input" id="tBiayaId" onchange="onBiayaPilihChange()">${bOpts}</select></div>
+      <div class="row2">
+        <div class="field"><label>Nominal Tagihan (Rp)</label><input class="input" id="tNominal" type="number"/></div>
+        <div class="field"><label>Periode (YYYY-MM)</label><input class="input" id="tPeriode" value="${new Date().toISOString().slice(0,7)}"/></div>
+      </div>
+      <div class="field"><label>Jatuh Tempo</label><input class="input" id="tJt" type="date"/></div>
+      <div class="field"><label>Catatan (Opsional)</label><input class="input" id="tCatatan" placeholder="Contoh: Keringanan khusus"/></div>
+    `);
+    STATE.__modal = 'TAGIHAN_ADD_SINGLE';
+    if(STATE.cache.biaya.length > 0) {
+      document.getElementById('tNominal').value = STATE.cache.biaya[0].nominal;
+    }
   } else if(m==='USERS'){
     openModal('Tambah User', `
       <input type="hidden" id="mId"/>
@@ -800,6 +804,13 @@ function openAdd(){
     STATE.__selectedAnakIds = [];
     STATE.__modal = 'USERS';
   }
+}
+
+function onBiayaPilihChange(){
+  const sel = document.getElementById('tBiayaId');
+  const opt = sel.options[sel.selectedIndex];
+  const nom = opt.getAttribute('data-nom');
+  if(nom) document.getElementById('tNominal').value = nom;
 }
 
 function toggleRoleFields(){
@@ -928,7 +939,9 @@ function openEditTagihan(t){
 
 function openGenerateModal(){
   const kOpts = `<option value="">Semua Kelas</option>` + STATE.cache.kelas.map(k=>`<option value="${k.id}">${escapeHtml(k.nama)}</option>`).join('');
+  const bOpts = STATE.cache.biaya.map(b=>`<option value="${b.id}">${escapeHtml(b.nama)} (${fmtRp(b.nominal)})</option>`).join('');
   openModal('Generate Tagihan Massal', `
+    <div class="field"><label>Pilih Jenis Biaya yang Ingin Digenerate</label><select class="input" id="gBiayaId">${bOpts}</select></div>
     <div class="row2">
       <div class="field"><label>Periode (YYYY-MM)</label><input class="input" id="gPeriode" value="${new Date().toISOString().slice(0,7)}"/></div>
       <div class="field"><label>Jatuh Tempo</label><input class="input" id="gJt" type="date"/></div>
@@ -978,7 +991,7 @@ function openPromoteModal(){
 async function saveModal(){
   const m = STATE.__modal;
   const { db, fbLibs } = window;
-  const { collection, addDoc, updateDoc, doc, getDocs } = fbLibs;
+  const { collection, addDoc, updateDoc, doc, getDocs, getDoc } = fbLibs;
 
   try {
     topLoading(true);
@@ -1015,6 +1028,22 @@ async function saveModal(){
 
       await addDoc(collection(db, 'biaya'), { nama, nominal, kategori, tipe, kelasId, createdAt: new Date().toISOString() });
       toast('Sukses', 'Biaya berhasil ditambah');
+    } else if(m==='TAGIHAN_ADD_SINGLE'){
+      const siswaId = document.getElementById('tSiswaId').value;
+      const biayaId = document.getElementById('tBiayaId').value;
+      const nominal = Number(document.getElementById('tNominal').value||0);
+      const periode = document.getElementById('tPeriode').value.trim();
+      const jatuhTempo = document.getElementById('tJt').value;
+      const catatan = document.getElementById('tCatatan').value.trim();
+
+      const bDoc = await getDoc(doc(db, 'biaya', biayaId));
+      const bData = bDoc.data();
+
+      await addDoc(collection(db, 'tagihan'), {
+        siswaId, biayaId, namaBiaya: bData.nama, nominal, terbayar: 0,
+        periode, jatuhTempo, catatan, status: 'BELUM', createdAt: new Date().toISOString()
+      });
+      toast('Sukses', 'Tagihan perorangan berhasil ditambahkan');
     } else if(m==='USERS'){
       const id = document.getElementById('mId').value;
       const username = document.getElementById('mUname').value.trim().toLowerCase();
@@ -1037,7 +1066,7 @@ async function saveModal(){
       const catatan = document.getElementById('pCatatan').value.trim();
       const tglBayar = document.getElementById('pTgl').value;
 
-      const tDoc = await window.fbLibs.getDoc(doc(db, 'tagihan', tId));
+      const tDoc = await getDoc(doc(db, 'tagihan', tId));
       const t = tDoc.data();
       const terbayarBaru = Number(t.terbayar||0) + jumlah;
       if(terbayarBaru > t.nominal) throw new Error('Pembayaran melebihi total tagihan!');
@@ -1050,41 +1079,41 @@ async function saveModal(){
       const tId = document.getElementById('eTid').value;
       const nominal = Number(document.getElementById('eNominal').value||0);
       const catatan = document.getElementById('eCatatan').value.trim();
-      const tDoc = await window.fbLibs.getDoc(doc(db, 'tagihan', tId));
+      const tDoc = await getDoc(doc(db, 'tagihan', tId));
       const t = tDoc.data();
       const status = nominal <= Number(t.terbayar||0) ? 'LUNAS' : (Number(t.terbayar||0) > 0 ? 'DICICIL' : 'BELUM');
       await updateDoc(doc(db, 'tagihan', tId), { nominal, status, catatan });
       toast('Sukses', 'Tagihan diperbarui');
     } else if(m==='GEN_TAGIHAN'){
+      const biayaId = document.getElementById('gBiayaId').value;
       const periode = document.getElementById('gPeriode').value.trim();
       const jatuhTempo = document.getElementById('gJt').value;
       const kelasId = document.getElementById('gKelas').value;
-      if(!periode) throw new Error('Periode wajib diisi');
+      if(!biayaId || !periode) throw new Error('Jenis biaya & periode wajib diisi');
+
+      const bDoc = await getDoc(doc(db, 'biaya', biayaId));
+      const b = bDoc.data();
 
       const sSnap = await getDocs(collection(db, 'siswa'));
-      const bSnap = await getDocs(collection(db, 'biaya'));
       const batch = window.fbLibs.writeBatch(db);
       let count = 0;
 
       sSnap.forEach(sDoc => {
         const s = sDoc.data();
         if(kelasId && s.kelasId !== kelasId) return;
-        bSnap.forEach(bDoc => {
-          const b = bDoc.data();
-          if(b.kelasId && b.kelasId !== s.kelasId) return;
-          if(b.kategori === 'BOARDING' && s.isPondok !== '1') return;
+        if(b.kelasId && b.kelasId !== s.kelasId) return;
+        if(b.kategori === 'BOARDING' && s.isPondok !== '1') return;
 
-          const ref = doc(collection(db, 'tagihan'));
-          batch.set(ref, {
-            siswaId: sDoc.id, kelasId: s.kelasId, biayaId: bDoc.id,
-            namaBiaya: b.nama, nominal: b.nominal, terbayar: 0,
-            periode, jatuhTempo, status: 'BELUM', createdAt: new Date().toISOString()
-          });
-          count++;
+        const ref = doc(collection(db, 'tagihan'));
+        batch.set(ref, {
+          siswaId: sDoc.id, kelasId: s.kelasId, biayaId: biayaId,
+          namaBiaya: b.nama, nominal: b.nominal, terbayar: 0,
+          periode, jatuhTempo, status: 'BELUM', createdAt: new Date().toISOString()
         });
+        count++;
       });
       await batch.commit();
-      toast('Sukses', `Berhasil generate ${count} tagihan massal!`);
+      toast('Sukses', `Berhasil generate ${count} tagihan untuk "${b.nama}"!`);
     } else if(m==='PROMOTE'){
       const targetKelasId = document.getElementById('targetKelasId').value;
       const batch = window.fbLibs.writeBatch(db);

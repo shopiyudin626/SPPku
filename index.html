@@ -9,7 +9,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Pastikan Menggunakan Konfigurasi Firebase Proyek Anda
     // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBu3FsEvZnlBNUzYVUFW7rnUbak9Or6fHU",
@@ -20,6 +19,7 @@ const firebaseConfig = {
   appId: "1:697361025400:web:4f1ffc301e25586c81e08d",
   measurementId: "G-51ZNSWN3XR"
 };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     window.db = db;
@@ -254,7 +254,6 @@ function toast(title, msg, type='ok'){
 }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 
-// FUNGSI KOMPRESI FOTO BUKTI TRANSFER OTOMATIS
 function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -481,6 +480,9 @@ async function loadActive(){
                 <b>${escapeHtml(t.namaBiaya)}</b> (${escapeHtml(t.periode)})<br>
                 <small class="muted">Sisa Tunggakan: <b style="color:var(--red)">${fmtRp(t.nominal - t.terbayar)}</b></small>
                 ${t.status === 'PENDING' ? '<br><span class="badge" style="background:#fef3c7;color:#b45309">Menunggu Verifikasi Admin</span>' : ''}
+              </div>
+              <div>
+                ${t.status === 'PENDING' ? `<button class="btn mini warn" onclick="toast('Informasi', 'Bukti Anda sedang diverifikasi oleh admin', 'warn')">Lihat Status</button>` : ''}
               </div>
             </div>`).join('') : '<div class="muted">Alhamdulillah, tidak ada tunggakan.</div>'}
         </div>
@@ -769,7 +771,6 @@ async function viewSiswaStatement(siswa){
   }
 }
 
-// MODAL KONFIRMASI TRANSFER / CICILAN GABUNGAN OLEH ORTU
 async function openOrtuKonfirmasiTransferModal(){
   const allowIds = STATE.me.siswaIds ? STATE.me.siswaIds.split(',').map(s=>s.trim()) : [];
   if(!allowIds.length) return;
@@ -834,7 +835,6 @@ async function submitOrtuTransferGabungan(){
     const tDoc = await getDoc(doc(window.db, 'tagihan', tagihanId));
     const tData = tDoc.data();
 
-    // Tandai tagihan terkait menjadi PENDING dengan membawa info bukti transfer
     await updateDoc(doc(window.db, 'tagihan', tagihanId), {
       status: 'PENDING',
       buktiBase64: compressedBase64,

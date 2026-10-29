@@ -20,7 +20,6 @@ const firebaseConfig = {
   appId: "1:697361025400:web:4f1ffc301e25586c81e08d",
   measurementId: "G-51ZNSWN3XR"
 };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     window.db = db;
@@ -194,7 +193,7 @@ const firebaseConfig = {
               <button class="btn primary" id="btnBatch" style="display:none" onclick="openBatchSiswa()">Batch Import</button>
               <button class="btn primary" id="btnPromote" style="display:none" onclick="openPromoteModal()">Naik/Pindah Kelas</button>
               <button class="btn danger" id="btnDeleteSelected" style="display:none" onclick="deleteSelectedRows()">Hapus Terpilih</button>
-              <button class="btn primary" id="btnAction" style="display:none" onclick="openGenerateModal()">Generate Massal</button>
+              <button class="btn primary" id="btnAction" style="display:none" onclick="openGenerateModal()">Generate Tagihan</button>
             </div>
           </div>
           <div class="body" id="body"></div>
@@ -237,7 +236,7 @@ const MODS = {
   BIAYA: { title:'Biaya', hint:'Tarif iuran sekolah & asrama', roles:['SUPERADMIN','ADMIN','GURU'] },
   TAGIHAN: { title:'Tagihan/Tunggakan', hint:'Monitoring tagihan & verifikasi bukti transfer', roles:['SUPERADMIN','ADMIN','GURU'] },
   BAYAR: { title:'Pembayaran', hint:'Riwayat transaksi masuk', roles:['SUPERADMIN','ADMIN','GURU'] },
-  ORTU: { title:'Portal Ortu', hint:'Keuangan anak, upload bukti & e-Statement', roles:['ORTU'] },
+  ORTU: { title:'Portal Ortu', hint:'Keuangan anak, konfirmasi transfer & e-Statement', roles:['ORTU'] },
   USERS: { title:'Users', hint:'Manajemen akun pengguna sistem', roles:['SUPERADMIN','ADMIN'] },
 };
 
@@ -255,7 +254,7 @@ function toast(title, msg, type='ok'){
 }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 
-// FUNGSI KOMPRESI FOTO BUKTI TRANSFER
+// FUNGSI KOMPRESI FOTO BUKTI TRANSFER OTOMATIS
 function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -286,7 +285,7 @@ function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
         ctx.drawImage(img, 0, 0, width, height);
 
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(dataUrl); // Menghasilkan string Base64 yang sudah sangat ringan (~100-200 KB)
+        resolve(dataUrl); 
       };
       img.onerror = (err) => reject(err);
     };
@@ -464,22 +463,24 @@ async function loadActive(){
       const bayarAnak = pSnap.docs.map(d=>({id:d.id, ...d.data()})).filter(p => allowIds.includes(p.siswaId));
 
       body.innerHTML = `
-        <div class="cards" style="grid-template-columns:repeat(3,1fr)">
-          <div class="card"><div class="muted">Anak Terdaftar</div><div style="font-size:18px;font-weight:bold">${anakList.length}</div></div>
+        <div class="cards" style="grid-template-columns:repeat(2,1fr)">
           <div class="card"><div class="muted">Total Tunggakan</div><div style="font-size:18px;font-weight:bold;color:var(--red)">${fmtRp(totalTunggakan)}</div></div>
-          <div class="card"><div class="muted">Cetak e-Statement</div><div style="margin-top:6px"><button class="btn primary mini" onclick="printOrtuPdf()">Unduh PDF</button></div></div>
+          <div class="card">
+            <div class="muted">Aksi Mandiri</div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="btn primary mini" onclick="openOrtuKonfirmasiTransferModal()">Konfirmasi Transfer / Cicilan</button>
+              <button class="btn mini" onclick="printOrtuPdf()">Unduh PDF</button>
+            </div>
+          </div>
         </div>
         <div class="card" style="margin-top:12px">
-          <h3 style="margin:0 0 8px 0;font-size:14px">Rincian Tunggakan Tagihan</h3>
+          <h3 style="margin:0 0 8px 0;font-size:14px">Rincian Tunggakan Tagihan Anak</h3>
           ${tagihanAnak.length ? tagihanAnak.map(t=>`
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--border)">
               <div>
                 <b>${escapeHtml(t.namaBiaya)}</b> (${escapeHtml(t.periode)})<br>
-                <small class="muted">Sisa: <b style="color:var(--red)">${fmtRp(t.nominal - t.terbayar)}</b></small>
+                <small class="muted">Sisa Tunggakan: <b style="color:var(--red)">${fmtRp(t.nominal - t.terbayar)}</b></small>
                 ${t.status === 'PENDING' ? '<br><span class="badge" style="background:#fef3c7;color:#b45309">Menunggu Verifikasi Admin</span>' : ''}
-              </div>
-              <div>
-                ${t.status !== 'PENDING' ? `<button class="btn primary mini" onclick='openOrtuUploadModal(${JSON.stringify(t)})'>Upload Bukti Transfer</button>` : `<button class="btn mini" onclick="alert('Bukti Anda sedang diverifikasi oleh admin')">Lihat Status</button>`}
               </div>
             </div>`).join('') : '<div class="muted">Alhamdulillah, tidak ada tunggakan.</div>'}
         </div>
@@ -768,70 +769,100 @@ async function viewSiswaStatement(siswa){
   }
 }
 
-function openOrtuUploadModal(t){
-  openModal('Upload Bukti Transfer', `
-    <input type="hidden" id="uTagihanId" value="${t.id}"/>
-    <div class="field"><label>Tagihan</label><b>${escapeHtml(t.namaBiaya)} (${escapeHtml(t.periode)})</b></div>
-    <div class="field"><label>Sisa Nominal Pembayaran</label><input class="input" value="${fmtRp(t.nominal - (t.terbayar||0))}" disabled/></div>
-    <div class="field"><label>Nominal yang Ditransfer (Rp)</label><input class="input" id="uNominalTf" type="number" value="${t.nominal - (t.terbayar||0)}"/></div>
-    <div class="field">
-      <label>Pilih Foto Struk / Screenshot Transfer</label>
-      <input class="input" type="file" id="uFileBukti" accept="image/*"/>
-      <small class="muted">*Foto akan dikompresi otomatis secara cepat & ringan</small>
-    </div>
-    <div class="field"><label>Catatan Orang Tua</label><input class="input" id="uCatatanOrtu" placeholder="Contoh: Transfer via m-banking Mandiri an. Budi"/></div>
-  `);
-  document.getElementById('mFoot').innerHTML = `
-    <button class="btn" onclick="closeModal()">Batal</button>
-    <button class="btn primary" onclick="submitOrtuBukti()">Kirim Bukti</button>
-  `;
-  STATE.__modal = 'ORTU_UPLOAD';
+// MODAL KONFIRMASI TRANSFER / CICILAN GABUNGAN OLEH ORTU
+async function openOrtuKonfirmasiTransferModal(){
+  const allowIds = STATE.me.siswaIds ? STATE.me.siswaIds.split(',').map(s=>s.trim()) : [];
+  if(!allowIds.length) return;
+  const siswaId = allowIds[0];
+
+  try {
+    topLoading(true);
+    const { collection, getDocs, query, where } = window.fbLibs;
+    const tQ = query(collection(window.db, 'tagihan'), where('siswaId', '==', siswaId));
+    const tSnap = await getDocs(tQ);
+    const tagihanAnak = tSnap.docs.map(d=>({id:d.id, ...d.data()})).filter(t => t.status !== 'LUNAS');
+    const totalTunggakan = tagihanAnak.reduce((a,b)=>a+(b.nominal - (b.terbayar||0)), 0);
+
+    const tagihanOpts = tagihanAnak.map(t => `<option value="${t.id}">${escapeHtml(t.namaBiaya)} (${escapeHtml(t.periode)}) - Sisa: ${fmtRp(t.nominal - (t.terbayar||0))}</option>`).join('');
+
+    openModal('Konfirmasi Transfer / Cicilan Online', `
+      <input type="hidden" id="uSiswaId" value="${siswaId}"/>
+      <div class="field"><label>Total Seluruh Tunggakan</label><input class="input" value="${fmtRp(totalTunggakan)}" disabled/></div>
+      <div class="field">
+        <label>Pilih Tagihan yang Ingin Dibayar / Dicicil</label>
+        <select class="input" id="uTagihanIdSelect">${tagihanOpts || '<option value="">Tidak ada tunggakan</option>'}</select>
+        <small class="muted">*Jika ingin membayar beberapa sekaligus, pilih salah satu lalu tulis keterangannya di bawah.</small>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Jumlah yang Ditransfer (Rp)</label><input class="input" id="uNominalTf" type="number" placeholder="Contoh: 150000"/></div>
+        <div class="field"><label>Metode Transfer</label><select class="input" id="uMetodeTf"><option value="TRANSFER">Transfer Bank</option><option value="QRIS">QRIS / E-Wallet</option></select></div>
+      </div>
+      <div class="field">
+        <label>Pilih Foto Bukti Transfer (Kompresi Otomatis)</label>
+        <input class="input" type="file" id="uFileBukti" accept="image/*"/>
+      </div>
+      <div class="field"><label>Catatan / Keterangan Cicilan Gabungan</label><input class="input" id="uCatatanOrtu" placeholder="Contoh: Bayar lunas renang Rp10rb, sisa Rp50rb untuk cicil SPP"/></div>
+    `);
+    document.getElementById('mFoot').innerHTML = `
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn primary" onclick="submitOrtuTransferGabungan()">Kirim Konfirmasi</button>
+    `;
+    STATE.__modal = 'ORTU_KONFIRMASI';
+  } catch(e) {
+    toast('Error', e.message, 'err');
+  } finally { topLoading(false); }
 }
 
-async function submitOrtuBukti(){
-  const tId = document.getElementById('uTagihanId').value;
+async function submitOrtuTransferGabungan(){
+  const siswaId = document.getElementById('uSiswaId').value;
+  const tagihanId = document.getElementById('uTagihanIdSelect').value;
   const nominalTf = Number(document.getElementById('uNominalTf').value||0);
+  const metode = document.getElementById('uMetodeTf').value;
   const fileInput = document.getElementById('uFileBukti');
   const catatan = document.getElementById('uCatatanOrtu').value.trim();
 
+  if(!tagihanId) { toast('Error', 'Tidak ada tagihan yang dipilih!', 'err'); return; }
+  if(nominalTf <= 0) { toast('Error', 'Masukkan nominal transfer yang valid!', 'err'); return; }
   if(!fileInput.files.length) { toast('Error', 'Pilih foto bukti transfer!', 'err'); return; }
-  if(nominalTf <= 0) { toast('Error', 'Nominal transfer harus valid!', 'err'); return; }
 
   try {
     topLoading(true);
     const file = fileInput.files[0];
     const compressedBase64 = await compressImage(file);
 
-    const { doc, updateDoc } = window.fbLibs;
-    await updateDoc(doc(window.db, 'tagihan', tId), {
+    const { doc, updateDoc, getDoc } = window.fbLibs;
+    const tDoc = await getDoc(doc(window.db, 'tagihan', tagihanId));
+    const tData = tDoc.data();
+
+    // Tandai tagihan terkait menjadi PENDING dengan membawa info bukti transfer
+    await updateDoc(doc(window.db, 'tagihan', tagihanId), {
       status: 'PENDING',
       buktiBase64: compressedBase64,
       nominalKlaim: nominalTf,
-      catatanOrtu: catatan,
+      metodeKlaim: metode,
+      catatanOrtu: catatan || `Cicilan/Transfer gabungan sebesar ${fmtRp(nominalTf)}`,
       uploadedAt: new Date().toISOString()
     });
 
-    toast('Sukses', 'Bukti berhasil di-upload & menunggu verifikasi Admin');
+    toast('Sukses', 'Konfirmasi transfer dikirim! Menunggu verifikasi admin.');
     closeModal();
     loadActive();
   } catch(e) {
-    toast('Error', 'Gagal memproses gambar: ' + e.message, 'err');
-  } finally {
-    topLoading(false);
-  }
+    toast('Error', e.message, 'err');
+  } finally { topLoading(false); }
 }
 
 function openVerifikasiModal(t){
-  openModal('Verifikasi Bukti Transfer', `
+  openModal('Verifikasi Bukti Transfer Ortu', `
     <input type="hidden" id="vTagihanId" value="${t.id}"/>
-    <div class="field"><label>Siswa</label><b>${escapeHtml(t.namaSiswa)}</b> - ${escapeHtml(t.namaBiaya)}</div>
+    <div class="field"><label>Siswa</label><b>${escapeHtml(t.namaSiswa)}</b> - ${escapeHtml(t.namaBiaya)} (${escapeHtml(t.periode)})</div>
     <div class="row2">
-      <div class="field"><label>Klaim Nominal Ditransfer</label><input class="input" value="${fmtRp(t.nominalKlaim||t.nominal)}" disabled/></div>
-      <div class="field"><label>Tanggal Kirim</label><input class="input" value="${(t.uploadedAt||'').slice(0,10)}" disabled/></div>
+      <div class="field"><label>Nominal Ditransfer / Diklaim</label><input class="input" value="${fmtRp(t.nominalKlaim||t.nominal)}" disabled/></div>
+      <div class="field"><label>Metode</label><input class="input" value="${escapeHtml(t.metodeKlaim||'TRANSFER')}" disabled/></div>
     </div>
-    <div class="field"><label>Catatan Ortu</label><div class="muted">${escapeHtml(t.catatanOrtu||'-')}</div></div>
+    <div class="field"><label>Catatan Orang Tua</label><div class="muted" style="background:#f8fafc;padding:8px;border-radius:8px">${escapeHtml(t.catatanOrtu||'-')}</div></div>
     <div class="field">
-      <label>Foto Bukti Transfer (Dikompresi)</label>
+      <label>Foto Bukti Transfer (Teringan & Jelas)</label>
       <div style="border:1px solid var(--border);border-radius:12px;padding:8px;text-align:center;background:#f8fafc">
         <img src="${t.buktiBase64}" style="max-width:100%;max-height:280px;border-radius:8px"/>
       </div>
@@ -839,12 +870,12 @@ function openVerifikasiModal(t){
   `);
   document.getElementById('mFoot').innerHTML = `
     <button class="btn danger" onclick="tolakBuktiTransfer('${t.id}')">Tolak</button>
-    <button class="btn primary" onclick="setujuiBuktiTransfer('${t.id}', ${t.nominalKlaim||t.nominal})">Setujui & Catat Pembayaran</button>
+    <button class="btn primary" onclick="setujuiBuktiTransfer('${t.id}', ${t.nominalKlaim||t.nominal}, '${escapeHtml(t.metodeKlaim||'TRANSFER')}', '${escapeHtml(t.catatanOrtu||'')}')">Setujui & Catat Pembayaran</button>
   `;
   STATE.__modal = 'VERIFIKASI_BUKTI';
 }
 
-async function setujuiBuktiTransfer(tId, jumlah){
+async function setujuiBuktiTransfer(tId, jumlah, metode, catatanOrtu){
   try {
     topLoading(true);
     const { doc, getDoc, updateDoc, addDoc, collection } = window.fbLibs;
@@ -857,13 +888,13 @@ async function setujuiBuktiTransfer(tId, jumlah){
     await updateDoc(doc(window.db, 'tagihan', tId), {
       terbayar: terbayarBaru,
       status: status,
-      buktiBase64: null // Hapus dari memori untuk menghemat memori
+      buktiBase64: null 
     });
 
     await addDoc(collection(window.db, 'pembayaran'), {
       tagihanId: tId, siswaId: t.siswaId, kelasId: t.kelasId,
-      jumlah: Number(jumlah), metode: 'TRANSFER',
-      catatan: 'Verifikasi Bukti Transfer Ortu: ' + (t.catatanOrtu||''),
+      jumlah: Number(jumlah), metode: metode,
+      catatan: 'Verifikasi Transfer: ' + catatanOrtu,
       tglBayar: new Date().toISOString().slice(0,10),
       createdBy: STATE.me.username, createdAt: new Date().toISOString()
     });
@@ -1097,7 +1128,7 @@ function openPayModal(t){
       <div class="field"><label>Metode Pembayaran</label><select class="input" id="pMetode"><option value="CASH">CASH / TUNAI</option><option value="TRANSFER">TRANSFER BANK</option><option value="QRIS">QRIS / E-WALLET</option></select></div>
       <div class="field"><label>Tanggal</label><input class="input" id="pTgl" type="date" value="${new Date().toISOString().slice(0,10)}"/></div>
     </div>
-    <div class="field"><label>Catatan (Opsional)</label><input class="input" id="pCatatan" placeholder="Contoh: Titip ke wali kelas / via WA"/></div>
+    <div class="field"><label>Catatan (Opsional)</label><input class="input" id="pCatatan" placeholder="Contoh: Titip ke wali kelas"/></div>
   `);
   STATE.__modal = 'PAY_SUBMIT';
 }
